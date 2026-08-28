@@ -1,0 +1,5 @@
+# macOS
+.DS_Store
+
+# Internal authoring notes (not for publication)
+.kiro/
