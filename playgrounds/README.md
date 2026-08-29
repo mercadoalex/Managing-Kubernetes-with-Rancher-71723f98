@@ -10,7 +10,7 @@ Each custom playground is defined once by a manifest in its own folder here, bui
 |-----------------|----------------------|------|---------|
 | `k3s-workstation` | `k3s-workstation-1430c761` | `k3s` | The install lesson (`module-1/2.lesson-installing-rancher`) - workstation kubeconfig ready, but Rancher NOT installed (installing it is the exercise) |
 | `rancher-k3s` | `rancher-k3s-e09b66ec` | `k3s` | All post-install lessons (Module 1 "Exploring the UI" through Module 2) and single-cluster Rancher-dependent challenges |
-| `rancher-k3s-downstream` | _(TBD - suffix assigned on create)_ | `flexbox` | Module 3 advanced lessons that need a second, importable cluster (multi-cluster management, and the import-downstream-cluster challenge) |
+| `rancher-k3s-downstream` | `rancher-k3s-downstream-54528e97` | `flexbox` | Module 3 advanced lessons that need a second, importable cluster (multi-cluster management, and the import-downstream-cluster challenge) |
 
 > All three playgrounds pre-configure the `dev-machine` workstation's kubeconfig so the student uses plain `kubectl`/`helm` from their workstation and never touches a control plane. The differences: `k3s-workstation` has no Rancher (installing it is the exercise); `rancher-k3s` has Rancher pre-installed on a single cluster; `rancher-k3s-downstream` has Rancher pre-installed on an upstream cluster PLUS a separate empty downstream cluster to import.
 
@@ -64,13 +64,29 @@ Manifest: `rancher-k3s-downstream/manifest.yaml`.
 | `rancher-server` | `172.16.0.2` | `k3s-cplane` | Upstream / management cluster. Single-node K3s; Rancher installed on top by init tasks. |
 | `downstream-01` | `172.16.0.3` | `ubuntu-24-04` | Downstream / user cluster. K3s installed FRESH by an init task, empty, waiting to be imported. |
 
-All three machines share one `local` subnet (`172.16.0.0/24`). The two clusters are kept distinct by their K3s datastores and tokens, not by network isolation - an earlier two-subnet design was dropped because iximiuz networks are isolated L2 bridges with no routing between them, which left the downstream cluster unable to reach Rancher (the cluster agent could never connect). Rancher's `server-url` is set to `http://172.16.0.2:30080` so the agent manifest handed to the downstream points at a routable address.
+All three machines share one `local` subnet (`172.16.0.0/24`). The two clusters are kept distinct by their K3s datastores and tokens, not by network isolation - an earlier two-subnet design was dropped because iximiuz networks are isolated L2 bridges with no routing between them, which left the downstream cluster unable to reach Rancher (the cluster agent could never connect). Rancher's `server-url` is set to `https://172.16.0.2.sslip.io:30443` so the agent manifest handed to the downstream points at a routable, name-matching address.
 
 ### Why the downstream cluster uses a fresh K3s install (not the baked `k3s-cplane`)
 
 The baked `k3s-cplane` rootfs ships a **hardcoded K3s cluster token** (confirmed in the upstream bake recipe `playgrounds/scripts/get-k3s.sh`). Two `k3s-cplane` machines sharing that token could accidentally form one HA cluster instead of two independent ones. To guarantee the downstream is a genuinely separate cluster, `downstream-01` uses a plain `ubuntu-24-04` rootfs and installs K3s from scratch via the `init_downstream_k3s` task, giving it its own token and datastore. Traefik and ServiceLB are disabled there - the import exercise does not need them.
 
 The downstream cluster is deliberately **not** wired into the dev-machine's kubeconfig. Registering it into Rancher through the UI is the whole point of the lesson.
+
+### Why Rancher runs in self-signed HTTPS mode here (NOT `tls=external`)
+
+This is the single most important difference from the single-cluster `rancher-k3s` playground, and it was found the hard way during live validation. The single-cluster playground installs Rancher with `--set tls=external` and exposes it over plain HTTP so the dashboard WebSocket rides `ws://` through the iximiuz tab. That works fine when nothing needs to *verify* Rancher's certificate. Cluster import does need exactly that, and `tls=external` breaks it:
+
+- With `tls=external`, Rancher's read-only `cacerts` setting stays **empty**. The downstream cluster agent then has no CA to verify Rancher and crash-loops with `x509: certificate signed by unknown authority` / `Certificate chain is not complete`.
+- `cacerts` is **read-only** (the settings admission webhook rejects patches), so this cannot be repaired on a running install. It has to be populated at install time, and only the self-signed mode (or a real-CA mode) does that.
+
+So this playground installs Rancher in its **default self-signed mode** (no `tls=external`). Rancher generates its own CA, populates `cacerts` (~660 bytes of PEM), and serves HTTPS. The agent's `--insecure` registration command then verifies against that CA and connects. Confirmed end-to-end: agent `1/1 Running`, imported cluster reaches `Ready=True`.
+
+Consequences baked into the manifest:
+
+- **Hostname is an sslip.io name:** `--set hostname=172.16.0.2.sslip.io`. `172.16.0.2.sslip.io` resolves to `172.16.0.2`, so the name is both routable from the downstream and valid as the certificate SAN. `rancher.localhost` would not resolve from `downstream-01`.
+- **Both NodePorts, HTTPS is primary:** the `rancher` service is patched to NodePort with `http` on 30080 and `https` on 30443. Self-signed Rancher force-redirects HTTP to HTTPS, so 30080 is only a redirect stub; the browser tab and the agent both use `https://172.16.0.2.sslip.io:30443`.
+- **The Rancher UI tab uses `tls: true`:** `kind: http-port`, `number: 30443`, `tls: true`. The iximiuz proxy speaks HTTPS to the NodePort and, because generated tab URLs are always HTTPS, the dashboard WebSocket travels `wss://` end-to-end (the supported path, unlike the plain-HTTP `ws://` hack the single-cluster playground relies on). Students accept a one-time browser certificate warning.
+- **Registration token quirk:** in this Rancher version the `clusterregistrationtoken` CR's `status.token` is empty and `status.manifestUrl` carries a literal `{token}` placeholder. The real token lives in the secret `crt-token-default-token` in the cluster's namespace. The challenge `.solution.sh` reads it from there and builds the URL as `https://172.16.0.2.sslip.io:30443/v3/import/<token>_<cluster-id>.yaml`.
 
 ### Build / register with labctl
 

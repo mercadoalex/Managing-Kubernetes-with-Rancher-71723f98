@@ -117,13 +117,19 @@ playground:
       machine: dev-machine
     - kind: terminal
       machine: downstream-01
-    # Rancher over PLAIN HTTP via NodePort 30080 (no tls/hostRewrite) so the
-    # iximiuz proxy forwards the dashboard's ws:// WebSocket. Same validated
-    # approach as the single-cluster rancher-k3s playground.
+    # Rancher is served over HTTPS (self-signed) on NodePort 30443. Unlike the
+    # single-cluster rancher-k3s playground (which uses plain HTTP), this
+    # playground MUST run Rancher in self-signed mode so the read-only `cacerts`
+    # setting gets populated - the downstream cluster agent needs that CA to
+    # verify Rancher and connect. In self-signed mode Rancher force-redirects
+    # HTTP to HTTPS, so a plain-HTTP tab is useless here. tls: true tells the
+    # iximiuz proxy to speak HTTPS to the NodePort; the dashboard WebSocket
+    # rides wss:// end-to-end, which the proxy supports.
     - kind: http-port
       name: Rancher
       machine: rancher-server
-      number: 30080
+      number: 30443
+      tls: true
       target: window
 
   initTasks:
@@ -195,16 +201,30 @@ playground:
         kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
         kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
 
-    # --- Upstream cluster: Rancher ---
-    # Same validated install as the single-cluster playground: tls=external
-    # (plain HTTP), then expose Rancher as NodePort 30080 for the browser tab.
+    # --- Upstream cluster: Rancher (self-signed TLS) ---
+    # This playground installs Rancher in its DEFAULT self-signed mode (NO
+    # tls=external). That is the crucial difference from the single-cluster
+    # rancher-k3s playground, and it is required for cluster import to work:
     #
-    # Extra step for this two-cluster playground: set Rancher's server-url to the
-    # NodePort address that the downstream cluster can actually reach over the
-    # shared network (http://172.16.0.2:30080). The cluster-agent registration
-    # manifest embeds this URL, so it MUST resolve and route from downstream-01.
-    # The default hostname (rancher.localhost) does not resolve there, which
-    # would leave every imported cluster stuck at Pending.
+    #   - tls=external leaves Rancher's read-only `cacerts` setting EMPTY. The
+    #     downstream cluster agent then cannot verify Rancher's certificate and
+    #     crash-loops with "certificate signed by unknown authority". `cacerts`
+    #     is read-only (admission webhook denies patches), so this cannot be
+    #     fixed after the fact - it must be populated at install time, which
+    #     only the self-signed (or a real-CA) install mode does.
+    #   - In self-signed mode Rancher generates its own CA, populates `cacerts`,
+    #     and serves HTTPS. The agent uses the `--insecure` registration command
+    #     and verifies against that CA. Confirmed working end-to-end.
+    #
+    # hostname uses an sslip.io name that resolves to the reachable node IP
+    # (172.16.0.2.sslip.io -> 172.16.0.2). This matters twice: it becomes the
+    # certificate SAN, and it is what the agent connects to. A name like
+    # rancher.localhost would not resolve from the downstream cluster.
+    #
+    # Rancher is exposed as a NodePort on BOTH 30080 (http) and 30443 (https).
+    # It force-redirects http->https, so the browser tab and the agent both use
+    # https://172.16.0.2.sslip.io:30443. server-url is set to that address so the
+    # agent registration manifest points somewhere routable from downstream-01.
     init_rancher:
       init: true
       machine: dev-machine
@@ -219,15 +239,16 @@ playground:
         kubectl create namespace cattle-system
         helm install rancher rancher-stable/rancher \
           --namespace cattle-system \
-          --set hostname=rancher.localhost \
+          --set hostname=172.16.0.2.sslip.io \
           --set bootstrapPassword=admin \
-          --set tls=external \
           --set replicas=1
         kubectl -n cattle-system rollout status deployment/rancher --timeout=480s
+        # Expose both HTTP (30080) and HTTPS (30443). 30443 is what the tab and
+        # the agent use; 30080 exists only because Rancher redirects it to https.
         kubectl -n cattle-system patch svc rancher \
-          -p '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080}]}}'
-        # Point Rancher's server-url at the reachable NodePort address so the
-        # agent manifest handed to downstream clusters points somewhere routable.
+          -p '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080},{"name":"https","port":443,"targetPort":443,"nodePort":30443}]}}'
+        # server-url must be the reachable https NodePort address so the agent
+        # manifest handed to downstream clusters points somewhere routable.
         for i in $(seq 1 30); do
           if kubectl get settings.management.cattle.io server-url >/dev/null 2>&1; then
             break
@@ -235,7 +256,7 @@ playground:
           sleep 4
         done
         kubectl patch settings.management.cattle.io server-url \
-          --type merge -p '{"value":"http://172.16.0.2:30080"}'
+          --type merge -p '{"value":"https://172.16.0.2.sslip.io:30443"}'
 
   accessControl:
     canList:

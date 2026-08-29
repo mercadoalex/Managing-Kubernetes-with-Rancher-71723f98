@@ -8,7 +8,7 @@ You have two clusters that do not yet know about each other: Rancher on the upst
 
 ## Create the Import in Rancher
 
-Open the **Rancher** tab and log in. Go to the cluster management view and choose **Import Existing**, then pick the **Generic** type - this works for any standard Kubernetes cluster, which our downstream K3s is. Give it a name like `downstream` and create it.
+Open the **Rancher** tab and log in. Because this playground's Rancher uses a self-signed certificate, your browser shows a certificate warning the first time - accept it to proceed. Then go to the cluster management view and choose **Import Existing**, then pick the **Generic** type - this works for any standard Kubernetes cluster, which our downstream K3s is. Give it a name like `downstream` and create it.
 
 Rancher immediately shows a registration command. It is a `kubectl apply` of a manifest served from the Rancher server, and it installs the Rancher cluster agent into whatever cluster you run it against. Because our Rancher uses a self-signed certificate, use the **insecure** variant of the command if Rancher offers one.
 

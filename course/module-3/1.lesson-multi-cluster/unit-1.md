@@ -53,7 +53,16 @@ Rancher represents every cluster it manages as a `clusters.management.cattle.io`
 
 ## Step 2: Start the Import in the Rancher UI
 
-Open the :tab[**Rancher**]{name="Rancher"} tab and log in. From the home screen, click **Import Existing** (under **Cluster Management > Clusters**, use **Import Existing**).
+Open the :tab[**Rancher**]{name="Rancher"} tab and log in. Rancher here uses a self-signed certificate, so your browser shows a certificate warning the first time you open the tab - accept it to continue. From the home screen, click **Import Existing** (under **Cluster Management > Clusters**, use **Import Existing**).
+
+::details-box
+---
+:summary: Why the browser warns about the certificate
+---
+
+This playground runs Rancher with a self-signed certificate - the same `ingress.tls.source=rancher` mode covered in the installation lesson. Because the certificate is signed by Rancher's own CA rather than a public authority, your browser does not trust it automatically and shows a warning. Accepting it is safe in this controlled lab. The same self-signed CA is what the downstream cluster's agent must trust to complete the import, which is why the registration command you use in the next step is the insecure variant.
+
+::
 
 Choose the **Generic** cluster type (this covers any standard Kubernetes cluster, which is what our downstream K3s is), give the cluster a name such as `downstream`, and click **Create**.
 

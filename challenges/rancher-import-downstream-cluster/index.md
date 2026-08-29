@@ -31,7 +31,7 @@ updatedAt: 2026-08-27
 # TODO(publish): replace with the suffixed name from
 #   `labctl playground create rancher-k3s-downstream --base flexbox`.
 playground:
-  name: rancher-k3s-downstream-REPLACEME
+  name: rancher-k3s-downstream-54528e97
 
 tasks:
   # Confirm the upstream Rancher cluster is reachable from the workstation and

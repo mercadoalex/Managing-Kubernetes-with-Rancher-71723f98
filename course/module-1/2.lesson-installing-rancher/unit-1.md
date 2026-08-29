@@ -272,7 +272,26 @@ helm install rancher rancher-stable/rancher \
   --set replicas=1
 ```
 
-The `hostname` becomes the Rancher URL, `bootstrapPassword` is the initial admin password, and `replicas=1` keeps things light for this cluster.
+The `hostname` becomes the Rancher URL, `bootstrapPassword` is the initial admin password, and `replicas=1` keeps things light for this cluster. The `ingress.tls.source=rancher` setting is the important one for certificates: it tells Rancher to generate and manage its own self-signed certificate.
+
+::details-box
+---
+:summary: How Rancher gets its TLS certificate (self-signed vs Let's Encrypt vs your own)
+---
+
+Rancher serves its UI and API over HTTPS, so it always needs a TLS certificate. The `ingress.tls.source` value chooses where that certificate comes from, and there are three options worth knowing because the right one depends on the environment:
+
+- **`rancher` - Rancher-generated self-signed (what this course uses).** Rancher creates its own Certificate Authority and issues its own certificate through cert-manager. It has no external dependencies, works offline, and comes up immediately. The tradeoff is that nothing outside the cluster trusts that CA by default, so browsers show a certificate warning, and any cluster you later import has to be given Rancher's CA so its agent can trust the connection. This is the standard quick-start and proof-of-concept choice.
+
+- **`letsEncrypt` - a real, publicly trusted certificate.** cert-manager requests a certificate from Let's Encrypt, which is trusted by browsers automatically, so there are no warnings and no CA to distribute. It requires a real public DNS name for Rancher and inbound reachability so Let's Encrypt can validate the domain. This is a common choice for internet-facing Rancher installations.
+
+- **`secret` - bring your own certificate.** You supply a certificate issued by your organization's internal CA or a commercial CA, stored in a Kubernetes secret. This suits enterprise and private or air-gapped environments where machines already trust the corporate CA and Rancher sits behind a load balancer.
+
+Which one resembles production? There is no single answer - it splits by environment. Internet-facing Rancher tends toward Let's Encrypt; enterprise or private Rancher tends toward bring-your-own with a corporate CA. Self-signed is the outlier: excellent for learning, not intended for production. We use it here precisely because a throwaway playground has no public DNS and no corporate CA, and because it makes the certificate-trust flow visible - something you will see directly in Module 3 when an imported cluster's agent has to trust this self-signed CA to connect.
+
+_This is a general summary of Rancher's TLS options, not a security recommendation for any specific deployment._
+
+::
 
 Why only one replica? `replicas` controls how many copies of the Rancher server pod run. In production you would use `replicas=3` so Rancher stays available if a node or pod fails - three copies spread across nodes give high availability. In this learning environment none of that matters: a single replica uses less CPU and memory, starts faster, and is perfectly fine for a throwaway cluster where an outage costs nothing. So we trade high availability for a lighter, quicker install.
 

@@ -26,7 +26,7 @@ tagz:
 # TODO(publish): replace with the suffixed name printed by
 #   `labctl playground create rancher-k3s-downstream --base flexbox`
 playground:
-  name: rancher-k3s-downstream-REPLACEME
+  name: rancher-k3s-downstream-54528e97
 
 challenges:
   # TODO(publish): replace with the suffixed name the platform assigns when the
