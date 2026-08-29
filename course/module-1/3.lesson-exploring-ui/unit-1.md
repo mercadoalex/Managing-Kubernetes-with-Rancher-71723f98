@@ -55,6 +55,15 @@ On first access, Rancher walks you through a short bootstrap:
 2. **Set a new admin password** - Rancher offers two options: set your own password, or **use a randomly generated one**. For simplicity, choose **Use a randomly generated password** and copy it somewhere handy - you will need it to log in for the rest of the course.
 3. **Server URL** - Rancher shows the address it will use for this installation. Accept the pre-filled value and continue.
 
+::image-box
+---
+:src: __static__/rancher-first-login-v1.png
+:alt: The Rancher first-login bootstrap screen prompting for the bootstrap password and a new admin password
+:max-width: 900px
+---
+_The first-login bootstrap: enter the bootstrap password, then set or generate a new admin password._
+::
+
 ::remark-box
 ---
 kind: info
@@ -114,13 +123,27 @@ Before we explore, it helps to have a mental model of how the UI is laid out. Ra
 
 The single most common point of confusion is mixing up (1) and (2): the **global** rail manages *which clusters exist and platform-wide settings*, while the **Cluster Explorer** manages *what runs inside one cluster*. As you follow the tour, notice when the sidebar switches between these two modes - it changes the moment you enter or leave a cluster.
 
-<!-- [image placeholder] rancher-ui-map.png - annotated screenshot labelling global nav, cluster explorer, and content pane -->
+::image-box
+---
+:src: __static__/rancher-ui-map-v1.png
+:alt: The Rancher UI layout annotated with three regions - the global navigation rail on the far left, the Cluster Explorer sidebar shown when inside a cluster, and the main content pane on the right
+:max-width: 900px
+---
+_The three parts of the Rancher UI: global navigation, the Cluster Explorer, and the content pane._
+::
 
 ## Step 3: The Home Page
 
 The home page lists every cluster this Rancher instance manages. On a fresh install there is exactly one: the **local** cluster - the cluster where Rancher itself is running.
 
-<!-- [image] rancher-home-local-cluster.png - Screenshot of the home page showing the local cluster card -->
+::image-box
+---
+:src: __static__/rancher-home-local-cluster-v1.png
+:alt: The Rancher home page showing the local cluster card with its provider (K3s), Kubernetes version, state, and node count, alongside the Import Existing and Create options
+:max-width: 900px
+---
+_The Rancher home page: the local cluster card and the Import Existing / Create options._
+::
 
 The **local** cluster card shows its key facts at a glance:
 
@@ -171,7 +194,14 @@ Entering a cluster switches the left sidebar to the **Cluster Explorer** - the s
 - **Storage** - PersistentVolumes, PersistentVolumeClaims, ConfigMaps, and Secrets.
 - **Apps** - the Helm chart catalog and installed releases.
 
-<!-- [image placeholder] rancher-cluster-explorer.png - the Cluster Explorer sidebar inside the local cluster -->
+::image-box
+---
+:src: __static__/rancher-cluster-explorer-v1.png
+:alt: The Cluster Explorer sidebar inside the local cluster, showing the Cluster, Workload, Service Discovery, Storage, and Apps sections
+:max-width: 900px
+---
+_The Cluster Explorer sidebar, showing the resources inside the local cluster._
+::
 
 Spend a moment clicking through these. Everything you see is a live view of the cluster - open **Cluster > Nodes** and you will find the same `cplane-01`, `node-01`, and `node-02` that `kubectl get nodes` just listed.
 
