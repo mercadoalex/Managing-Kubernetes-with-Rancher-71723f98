@@ -19,7 +19,13 @@ This mirrors how you would work in the real world: an operator manages a cluster
 
 ::
 
-<!-- [image] rancher-install-flow.png - Diagram of the install flow: cert-manager, then Rancher via Helm behind Traefik -->
+::image-box
+---
+:src: __static__/rancher-install-flow-v1.png
+:alt: The install flow from the dev-machine workstation - Helm installs cert-manager, then Rancher, which is exposed through the Traefik ingress and verified over HTTPS
+:max-width: 900px
+---
+::
 
 ## Confirm You Are on the Workstation
 
@@ -352,6 +358,16 @@ You should see `cattle-system` alongside the Fleet namespaces (`cattle-fleet-sys
 ```bash
 kubectl -n cattle-system get ingress
 ```
+
+The ingress is the front door to Rancher. When you reach `rancher.localhost`, the request travels through Traefik, into the Rancher Service, and on to the Rancher pod - all inside the cluster:
+
+::image-box
+---
+:src: __static__/rancher-traffic-path-v1.png
+:alt: The request path to Rancher - a client reaches https://rancher.localhost, Traefik ingress routes it by the ingress rule to the Rancher Service, which load-balances to the Rancher pod inside the K3s cluster
+:max-width: 900px
+---
+::
 
 ::simple-task
 ---
