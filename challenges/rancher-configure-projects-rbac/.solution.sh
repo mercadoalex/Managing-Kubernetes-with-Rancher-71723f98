@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Runs on the dev-machine workstation, using the pre-provisioned kubeconfig.
+export KUBECONFIG="$HOME/.kube/config"
+
 # Create the team namespace
 kubectl create namespace team-frontend
 

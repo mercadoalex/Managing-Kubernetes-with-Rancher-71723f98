@@ -15,7 +15,7 @@ tagz:
   - Rancher
   - RBAC
   - Namespaces
-  - Resource Quotas
+  - resource-quotas
 
 difficulty: medium
 
@@ -23,26 +23,15 @@ createdAt: 2026-08-27
 updatedAt: 2026-08-27
 
 playground:
-  name: ubuntu-k3s-bare
+  name: rancher-k3s-e09b66ec
 
 tasks:
-  init_wait_k3s:
-    init: true
-    run: |
-      for i in $(seq 1 30); do
-        if kubectl get nodes | grep -q " Ready"; then
-          exit 0
-        fi
-        sleep 2
-      done
-      echo "K3s did not become ready in time"
-      exit 1
-
   init_baseline_no_access:
     init: true
-    needs:
-      - init_wait_k3s
+    machine: dev-machine
+    user: laborant
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       # Baseline for the negative check: with no RoleBinding in place, alice
       # must have no access. If this fails, the cluster is not a clean slate.
       CAN=$(kubectl auth can-i list pods --namespace default --as alice 2>/dev/null)
@@ -53,7 +42,10 @@ tasks:
       echo "Baseline confirmed: alice has no access yet"
 
   verify_namespace:
+    machine: dev-machine
+    user: laborant
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       if ! kubectl get namespace team-frontend >/dev/null 2>&1; then
         echo "Namespace 'team-frontend' does not exist yet"
         exit 1
@@ -61,9 +53,12 @@ tasks:
       echo "Namespace 'team-frontend' exists"
 
   verify_quota:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_namespace
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_quota_hint.txt
 
       QUOTA=$(kubectl -n team-frontend get resourcequota -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -87,9 +82,12 @@ tasks:
       fi
 
   verify_role:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_namespace
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_role_hint.txt
 
       ROLE=$(kubectl -n team-frontend get role -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -121,9 +119,12 @@ tasks:
       fi
 
   verify_can_read:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_role
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_can_read_hint.txt
 
       if ! kubectl -n team-frontend get rolebinding -o jsonpath='{.items[0].metadata.name}' >/dev/null 2>&1; then
@@ -145,9 +146,12 @@ tasks:
       fi
 
   verify_cannot_write:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_can_read
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_cannot_write_hint.txt
 
       CAN_DELETE=$(kubectl auth can-i delete pods --namespace team-frontend --as alice 2>/dev/null)
@@ -172,7 +176,7 @@ tasks:
 
 Rancher Projects and its built-in roles are convenience layers over primitives that already exist in Kubernetes: namespaces, resource quotas, and RBAC. Understanding those primitives is what lets you reason about who can do what once Rancher is in the picture. In this challenge you will set up isolation for a single team by hand.
 
-The playground is a single-node K3s cluster. You will create a namespace for a frontend team, cap its resource usage, and give a user named `alice` read-only access to it - and only it.
+Work from the **dev-machine** terminal (its `kubectl` is already pointed at the cluster). You will create a namespace for a frontend team, cap its resource usage, and give a user named `alice` read-only access to it - and only it.
 
 ## Step 1: Create the Team Namespace
 

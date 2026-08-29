@@ -14,9 +14,9 @@ categories:
 tagz:
   - Rancher
   - Fleet
-  - CI/CD
+  - cicd
   - GitOps
-  - Continuous Delivery
+  - continuous-delivery
 
 difficulty: hard
 
