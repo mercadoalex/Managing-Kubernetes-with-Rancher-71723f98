@@ -42,6 +42,33 @@ We use K3s as the underlying cluster for a few practical reasons:
 - **Batteries included** - the playground's K3s ships with Helm, the Traefik ingress controller, and a ServiceLB load balancer already enabled, which gives Rancher a working ingress path out of the box.
 - **Same team as Rancher** - K3s and Rancher are both developed by SUSE, so they are a natural, well-supported pairing.
 
+::details-box
+---
+:summary: What exactly is K3s, and how is it different from Kubernetes?
+---
+
+K3s is a fully certified, conformant Kubernetes distribution. It passes the same CNCF conformance tests as any other Kubernetes, exposes the same APIs, and runs the same workloads. Anything you learn on K3s about deployments, services, namespaces, and RBAC applies directly to any other cluster. In that sense, learning on K3s is learning Kubernetes.
+
+What makes it different is the packaging, not the behaviour. Standard Kubernetes is assembled from several separate components (the API server, scheduler, controller manager, etcd, and a container runtime) that you install and wire together. K3s bundles all of that into a single binary under 100 MB, with sensible defaults chosen for you. The name is a nod to that trimming down: Kubernetes is often abbreviated "K8s", and K3s is the lighter take on it.
+
+A few things make it lightweight:
+
+- **One binary, one process to run.** K3s packages the control plane and node components together and starts them as a single service, so a cluster comes up in seconds.
+- **A simpler datastore option.** It can use an embedded lightweight database instead of a full etcd cluster, which removes a lot of operational overhead for small setups (etcd is still available for high-availability clusters).
+- **Batteries included.** K3s ships with common pieces already enabled - the Traefik ingress controller, the ServiceLB load balancer, CoreDNS, local-path storage, and metrics-server - which is exactly why this playground has a working ingress path for Rancher out of the box.
+
+::image-box
+---
+:src: __static__/k3s-internals-v1.png
+:alt: The internals of K3s packaged as a single binary - control plane (API server, scheduler, controller manager, embedded datastore), node components (kubelet, containerd, networking), and bundled add-ons (Traefik, ServiceLB, CoreDNS, local-path, metrics-server), contrasted with standard Kubernetes assembled from separate components
+:max-width: 850px
+---
+::
+
+Because of that small footprint, K3s is popular at the edge, in IoT and CI environments, and for development, but it is also used in real production. For heavier or more customized production clusters, SUSE offers RKE2, and full installers like kubeadm remain common - Rancher can manage all of them. Here, K3s simply gives us a fast, faithful Kubernetes to run Rancher on without spending the course setting up the cluster itself.
+
+::
+
 A few components are still installed by hand during the course - cert-manager and Rancher itself in the next lesson, and things like the monitoring stack later on - because installing and configuring them is part of what you are here to learn. What you will never have to do is build the Kubernetes cluster underneath.
 
 ::image-box
