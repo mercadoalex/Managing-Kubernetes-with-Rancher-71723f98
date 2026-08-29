@@ -140,6 +140,6 @@ The challenge below has you do the import on your own and confirm the cluster re
 
 ::card
 ---
-:challenge: challenges.rancher-import-downstream-cluster-REPLACEME
+:challenge: challenges.rancher-import-downstream-cluster-adec5893
 ---
 ::

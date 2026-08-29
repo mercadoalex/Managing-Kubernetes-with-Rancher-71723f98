@@ -29,9 +29,7 @@ playground:
   name: rancher-k3s-downstream-54528e97
 
 challenges:
-  # TODO(publish): replace with the suffixed name the platform assigns when the
-  # reworked challenge is (re)created, then reference it in the ::card below.
-  rancher-import-downstream-cluster-REPLACEME: {}
+  rancher-import-downstream-cluster-adec5893: {}
 
 tasks:
   # All verification runs on the dev-machine workstation as laborant, against
