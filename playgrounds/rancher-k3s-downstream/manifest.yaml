@@ -1,0 +1,246 @@
+kind: playground
+
+# NOTE: `name` gets a unique suffix appended by the platform on creation
+# (e.g. rancher-k3s-downstream-ab12cd34). Use the suffixed name that
+# `labctl playground create` prints in all subsequent commands and in lesson
+# `playground.name` references. See playgrounds/README.md for the procedure.
+name: rancher-k3s-downstream
+
+title: Rancher with a Separate Downstream Cluster
+
+description: |
+  A two-cluster topology for the advanced (Module 3) lessons of the "Managing
+  Kubernetes with Rancher" course. One K3s cluster runs Rancher (the upstream /
+  management cluster); a second, fully independent K3s cluster (the downstream /
+  user cluster) is provisioned empty so the student can register it into Rancher
+  from the UI. The student works from a dev-machine workstation that already has
+  kubectl and helm and a kubeconfig for the upstream cluster.
+
+categories:
+  - kubernetes
+
+# This is a from-scratch topology, so it is built on the `flexbox` base - the
+# only base that accepts an arbitrary machine set. The other bases (including
+# `k3s`) come with a fixed machine set that cannot be extended, which is why we
+# cannot simply add a fourth machine to the single-cluster `rancher-k3s`
+# playground for a downstream cluster.
+playground:
+  networks:
+    # A single shared network for all three machines. The two clusters are kept
+    # distinct by their K3s datastores and tokens (the downstream gets a fresh,
+    # independent K3s install), NOT by network isolation. Putting them on one
+    # subnet is deliberate: iximiuz networks are isolated L2 bridges with no
+    # routing between them, so a separate downstream subnet would leave the
+    # downstream cluster unable to reach Rancher, and the cluster agent could
+    # never connect to complete the import.
+    - name: local
+      subnet: 172.16.0.0/24
+
+  machines:
+    # The student's workstation. Reaches the upstream cluster's API server over
+    # the shared network (kubeconfig pre-provisioned below). It never needs
+    # direct kubectl access to the downstream cluster - importing that cluster
+    # happens through Rancher, driven from the UI.
+    - name: dev-machine
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            This is your workstation. Rancher (the upstream cluster) is
+            pre-installed and reachable from the "Rancher" tab. A second,
+            empty K3s cluster (downstream-01) is waiting to be imported into
+            Rancher. `kubectl get nodes` here targets the UPSTREAM cluster.
+      drives:
+        - source: k3s-dev-machine
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.5/24
+      resources:
+        cpuCount: 1
+        ramSize: 1GiB
+
+    # Upstream / management cluster: a single-node K3s that runs Rancher. Uses
+    # the baked k3s-cplane rootfs (K3s server auto-starts on boot). Rancher is
+    # installed on top by the init tasks below. Rancher needs ~2 vCPU / 4 GiB.
+    - name: rancher-server
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-cplane
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+      resources:
+        cpuCount: 2
+        ramSize: 4GiB
+
+    # Downstream / user cluster: a plain Ubuntu VM. K3s is installed FRESH by an
+    # init task (not the baked k3s-cplane image) so this cluster has its own
+    # independent token and datastore and can never accidentally HA-join the
+    # Rancher cluster, even though it shares the network. It starts with nothing
+    # on it - registering it into Rancher is the student's job.
+    - name: downstream-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            This is an independent K3s cluster (the downstream / user cluster).
+            It is NOT yet managed by Rancher - importing it is the exercise.
+      drives:
+        - source: ubuntu-24-04
+          mount: /
+          size: 20GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.3/24
+      resources:
+        cpuCount: 1
+        ramSize: 2GiB
+
+  tabs:
+    - kind: ide
+      machine: dev-machine
+    - kind: kexp
+      machine: dev-machine
+    - kind: terminal
+      machine: dev-machine
+    - kind: terminal
+      machine: downstream-01
+    # Rancher over PLAIN HTTP via NodePort 30080 (no tls/hostRewrite) so the
+    # iximiuz proxy forwards the dashboard's ws:// WebSocket. Same validated
+    # approach as the single-cluster rancher-k3s playground.
+    - kind: http-port
+      name: Rancher
+      machine: rancher-server
+      number: 30080
+      target: window
+
+  initTasks:
+    # --- Upstream cluster: workstation kubeconfig ---
+    # Fetch the Rancher cluster's kubeconfig onto the dev-machine and rewrite
+    # the API server address from 127.0.0.1 to the rancher-server IP so
+    # kubectl/helm on the workstation reach the upstream cluster over the shared
+    # network. This kubeconfig targets the UPSTREAM cluster only.
+    init_kubeconfig_devmachine:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 180
+      run: |
+        for i in $(seq 1 45); do
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 rancher-server \
+               'sudo test -f /etc/rancher/k3s/k3s.yaml' 2>/dev/null; then
+            break
+          fi
+          sleep 2
+        done
+        mkdir -p "$HOME/.kube"
+        ssh -o StrictHostKeyChecking=no rancher-server 'sudo cat /etc/rancher/k3s/k3s.yaml' \
+          | sed 's/127.0.0.1/172.16.0.2/' > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" \
+          || echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        export KUBECONFIG="$HOME/.kube/config"
+        kubectl get nodes
+
+    # --- Downstream cluster: fresh, independent K3s ---
+    # Install K3s from scratch on downstream-01 with its own token. Traefik and
+    # ServiceLB are disabled to keep the node lean (the import exercise does not
+    # need them). --tls-san lets the API server certificate cover the node IP.
+    # This runs before the import step so the downstream cluster is up and
+    # healthy, waiting to be registered into Rancher.
+    init_downstream_k3s:
+      init: true
+      machine: downstream-01
+      user: root
+      timeout_seconds: 300
+      run: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--tls-san 172.16.0.3 --disable=traefik --disable=servicelb" sh -s -
+        for i in $(seq 1 60); do
+          if k3s kubectl get nodes 2>/dev/null | grep -q ' Ready '; then
+            break
+          fi
+          sleep 2
+        done
+        k3s kubectl get nodes
+
+    # --- Upstream cluster: cert-manager ---
+    init_cert_manager:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_kubeconfig_devmachine
+      timeout_seconds: 300
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+        helm install cert-manager jetstack/cert-manager \
+          --namespace cert-manager \
+          --create-namespace \
+          --set crds.enabled=true
+        kubectl -n cert-manager rollout status deployment/cert-manager --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
+
+    # --- Upstream cluster: Rancher ---
+    # Same validated install as the single-cluster playground: tls=external
+    # (plain HTTP), then expose Rancher as NodePort 30080 for the browser tab.
+    #
+    # Extra step for this two-cluster playground: set Rancher's server-url to the
+    # NodePort address that the downstream cluster can actually reach over the
+    # shared network (http://172.16.0.2:30080). The cluster-agent registration
+    # manifest embeds this URL, so it MUST resolve and route from downstream-01.
+    # The default hostname (rancher.localhost) does not resolve there, which
+    # would leave every imported cluster stuck at Pending.
+    init_rancher:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_cert_manager
+      timeout_seconds: 600
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+        helm repo update
+        kubectl create namespace cattle-system
+        helm install rancher rancher-stable/rancher \
+          --namespace cattle-system \
+          --set hostname=rancher.localhost \
+          --set bootstrapPassword=admin \
+          --set tls=external \
+          --set replicas=1
+        kubectl -n cattle-system rollout status deployment/rancher --timeout=480s
+        kubectl -n cattle-system patch svc rancher \
+          -p '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080}]}}'
+        # Point Rancher's server-url at the reachable NodePort address so the
+        # agent manifest handed to downstream clusters points somewhere routable.
+        for i in $(seq 1 30); do
+          if kubectl get settings.management.cattle.io server-url >/dev/null 2>&1; then
+            break
+          fi
+          sleep 4
+        done
+        kubectl patch settings.management.cattle.io server-url \
+          --type merge -p '{"value":"http://172.16.0.2:30080"}'
+
+  accessControl:
+    canList:
+      - owner
+    canRead:
+      - owner
+    canStart:
+      - owner

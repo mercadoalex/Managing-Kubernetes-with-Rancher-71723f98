@@ -1,52 +1,45 @@
 ---
-title: Install Fleet and Register the Local Cluster
+title: Import the Downstream Cluster
 ---
 
-Standalone Fleet gives you Rancher's cluster registration and targeting model without needing a full Rancher server and a second cluster. Install it, let the local agent register, then label the cluster so GitOps deployments can find it.
+You have two clusters that do not yet know about each other: Rancher on the upstream cluster, and an empty K3s cluster on `downstream-01`. Bringing the second one under Rancher is a three-part move - tell Rancher you want to add a cluster, let it hand you a registration manifest, and apply that manifest on the cluster you are adding.
 
 <!--more-->
 
-## Install Fleet
+## Create the Import in Rancher
 
-Fleet is published as two OCI Helm charts - the CRDs and the controller. Install them in order into `cattle-fleet-system`:
+Open the **Rancher** tab and log in. Go to the cluster management view and choose **Import Existing**, then pick the **Generic** type - this works for any standard Kubernetes cluster, which our downstream K3s is. Give it a name like `downstream` and create it.
 
-```bash
-helm -n cattle-fleet-system install --create-namespace --wait \
-  fleet-crd oci://reg.rancher.com/rancher/fleet-crd
+Rancher immediately shows a registration command. It is a `kubectl apply` of a manifest served from the Rancher server, and it installs the Rancher cluster agent into whatever cluster you run it against. Because our Rancher uses a self-signed certificate, use the **insecure** variant of the command if Rancher offers one.
 
-helm -n cattle-fleet-system install --create-namespace --wait \
-  fleet oci://reg.rancher.com/rancher/fleet
-```
-
-Confirm the controller is running:
+From the workstation you can watch the new cluster object appear:
 
 ```bash
-kubectl -n cattle-fleet-system get pods
+kubectl get clusters.management.cattle.io
 ```
 
-## Confirm Registration
+A generated name like `c-xxxxx` shows up next to `local`, sitting in a `Pending` state until the agent connects.
 
-The local Fleet agent registers the cluster automatically. Wait for the `Cluster` object to appear in `fleet-local`:
+## Apply the Registration Command on the Downstream Cluster
+
+Switch to the **downstream-01** terminal. This shell is on the downstream cluster itself, and its `kubectl` points at that cluster - which is exactly where the agent needs to go. Paste and run the registration command Rancher gave you.
+
+The agent lands in the `cattle-system` namespace and dials back to Rancher over an outbound tunnel. You can watch it come up:
 
 ```bash
-kubectl -n fleet-local get clusters.fleet.cattle.io
+kubectl -n cattle-system get pods
 ```
 
-You will see a single cluster (named `local`) once the agent connects.
+## Watch It Go Active
 
-## Label the Cluster
-
-Add an `env` label to the registered cluster object so a GitRepo can target it:
+Back in the Rancher UI, the `downstream` cluster moves from **Pending** to **Active** as the agent reports in. Confirm the same from the workstation:
 
 ```bash
-CLUSTER=$(kubectl -n fleet-local get clusters.fleet.cattle.io -o jsonpath='{.items[0].metadata.name}')
-kubectl -n fleet-local label cluster.fleet.cattle.io "${CLUSTER}" env=lab
+kubectl get clusters.management.cattle.io
 ```
 
-Verify the label landed:
+The imported cluster now shows a Ready condition of `True`, and Rancher manages it alongside `local`. You can switch between the two from the cluster picker and deploy to either one.
 
-```bash
-kubectl -n fleet-local get clusters.fleet.cattle.io --show-labels
-```
+## Why the Two Terminals Matter
 
-This is exactly how Rancher targets downstream clusters: register the cluster, label it, then match those labels from a GitRepo's `clusterSelector`.
+The single most common mistake here is running the registration command in the wrong place. The manifest must be applied on the cluster being imported, so it goes in the **downstream-01** terminal. The **dev-machine** workstation targets the upstream Rancher cluster - useful for watching the import land, but applying the agent manifest there would try to register Rancher into itself. Keep the two straight and the import is smooth.
