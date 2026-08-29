@@ -18,4 +18,4 @@ That's it. The namespace appears in the list immediately, and the challenge chec
 
 ## Why not just use kubectl?
 
-You could create the namespace with `kubectl create namespace rancher-explorer`, and the first check would pass - but the second would fail. Rancher stamps namespaces it creates through the UI with a `field.cattle.io/creatorId` annotation, which a plain `kubectl create` does not set. The challenge looks for that marker precisely to make sure you exercised the UI, which is the skill this lesson is about.
+You could create the namespace with `kubectl create namespace rancher-explorer`, and the first check would pass - but the second would fail. When you create a namespace in the Rancher UI, Rancher assigns it to a **Project** and stamps a `field.cattle.io/projectId` annotation, which a plain `kubectl create` does not set. The challenge looks for that marker precisely to make sure you exercised the UI, which is the skill this lesson is about.

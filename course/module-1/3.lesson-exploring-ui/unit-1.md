@@ -239,6 +239,30 @@ Lesson complete - you can navigate Rancher.
 
 Reading about the UI is not the same as driving it. The challenge below asks you to create a namespace in the **local** cluster entirely through the Rancher dashboard. Solving it confirms you can navigate Rancher on your own and records your progress for the course.
 
+::details-box
+---
+:summary: Wait - why are there several "Create Namespace" buttons?
+---
+
+On the **Projects/Namespaces** page you will notice the namespaces are grouped, and each group has its own **Create Namespace** button - under **Project: Default**, **Not in a Project**, and **Project: System**.
+
+::image-box
+---
+:src: __static__/create-namespace-buttons-v1.png
+:alt: The Projects/Namespaces page showing a Create Namespace button per project group
+:max-width: 800px
+---
+_Namespaces are grouped by Project, each with its own Create button._
+::
+
+A **Project** is a Rancher-only concept - a grouping layer *on top of* Kubernetes namespaces that lets you apply shared RBAC and resource quotas to several namespaces at once. Plain Kubernetes has no notion of projects; they exist only inside Rancher.
+
+For this challenge, use the **Create Namespace** button under **Project: Default** - the general-purpose project for your own workloads. (Avoid **Project: System**, which is meant for cluster infrastructure namespaces.) Whichever you pick, the result is still an ordinary Kubernetes namespace; the project only affects Rancher-level grouping.
+
+We cover Projects, RBAC, and resource quotas properly in Module 2. For now, just knowing "Project = a Rancher group of namespaces, use Default" is enough.
+
+::
+
 ::card
 ---
 :challenge: challenges.rancher-create-namespace-ui-a41237c6

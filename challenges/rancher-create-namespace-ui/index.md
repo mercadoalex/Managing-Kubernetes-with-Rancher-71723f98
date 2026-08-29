@@ -53,17 +53,18 @@ tasks:
       export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_ui_hint.txt
 
-      # Rancher stamps namespaces it creates through the UI with a creatorId
-      # annotation. A plain `kubectl create namespace` does not set it - so this
-      # nudges the student to actually use the UI as the lesson intends.
-      CREATOR=$(kubectl get namespace rancher-explorer \
-        -o jsonpath='{.metadata.annotations.field\.cattle\.io/creatorId}' 2>/dev/null)
-      if [ -z "${CREATOR}" ]; then
-        echo "The namespace exists but was not created through Rancher. Delete it and create 'rancher-explorer' from the Rancher UI instead." | tee /tmp/verify_ui_hint.txt
+      # Rancher assigns every namespace created through its UI to a Project,
+      # stamping a field.cattle.io/projectId annotation. A plain
+      # `kubectl create namespace` never sets it - so its presence confirms the
+      # student used the Rancher UI, as the lesson intends.
+      PROJECT=$(kubectl get namespace rancher-explorer \
+        -o jsonpath='{.metadata.annotations.field\.cattle\.io/projectId}' 2>/dev/null)
+      if [ -z "${PROJECT}" ]; then
+        echo "The namespace exists but is not assigned to a Rancher Project, which means it was not created through the Rancher UI. Delete it and create 'rancher-explorer' from the Rancher UI instead." | tee /tmp/verify_ui_hint.txt
         exit 1
       fi
 
-      echo "Namespace 'rancher-explorer' was created through the Rancher UI (creator: ${CREATOR})"
+      echo "Namespace 'rancher-explorer' was created through the Rancher UI (project: ${PROJECT})"
     hintcheck: |
       if [ -f /tmp/verify_ui_hint.txt ]; then
         cat /tmp/verify_ui_hint.txt
@@ -116,5 +117,5 @@ Enter the **local** cluster from the global navigation. In the Cluster Explorer,
 :summary: "It says my namespace was not created through Rancher"
 ---
 
-That check looks for the marker Rancher adds to namespaces made in its UI. If you created `rancher-explorer` with `kubectl` out of habit, delete it (`kubectl delete namespace rancher-explorer`) and create it again from the Rancher UI instead.
+The check confirms the namespace is assigned to a Rancher **Project** - something Rancher does automatically when you create a namespace in its UI, but `kubectl create namespace` does not. If you created `rancher-explorer` with `kubectl` out of habit, delete it (`kubectl delete namespace rancher-explorer`) and create it again from the Rancher UI (it lands in **Project: Default**).
 ::
