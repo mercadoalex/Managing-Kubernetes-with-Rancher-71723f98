@@ -8,11 +8,25 @@ name: what-is-rancher
 
 Rancher is an open-source platform for managing Kubernetes clusters at scale. It provides a unified control plane that simplifies cluster operations - from provisioning and configuration to monitoring and access control - across any infrastructure.
 
-<!-- [image] rancher-overview.png - High-level diagram showing Rancher managing multiple clusters across cloud, on-prem, and edge -->
+::image-box
+---
+:src: __static__/rancher-overview-v1.png
+:alt: Rancher as a single control plane that an operator uses to manage Kubernetes clusters across cloud, on-premises, and edge infrastructure
+:max-width: 900px
+---
+::
 
 ## Why Rancher Exists
 
 Managing a single Kubernetes cluster is already complex. Managing multiple clusters across different environments (on-premises, cloud, edge) multiplies that complexity. Rancher solves this by offering a single pane of glass where operators can manage all their clusters, regardless of where they run.
+
+::image-box
+---
+:src: __static__/rancher-complexity-v1.png
+:alt: A before-and-after comparison - without Rancher an operator juggles many clusters each with its own separate tooling, and with Rancher the same clusters are managed through one unified control plane
+:max-width: 900px
+---
+::
 
 ## What This Course Covers
 
@@ -29,3 +43,11 @@ We use K3s as the underlying cluster for a few practical reasons:
 - **Same team as Rancher** - K3s and Rancher are both developed by SUSE, so they are a natural, well-supported pairing.
 
 A few components are still installed by hand during the course - cert-manager and Rancher itself in the next lesson, and things like the monitoring stack later on - because installing and configuring them is part of what you are here to learn. What you will never have to do is build the Kubernetes cluster underneath.
+
+::image-box
+---
+:src: __static__/rancher-playground-components-v1.png
+:alt: The playground's components in order - K3s with bundled Traefik and ServiceLB provided out of the box, then Helm, cert-manager, and Rancher used or installed during the course
+:max-width: 900px
+---
+::
