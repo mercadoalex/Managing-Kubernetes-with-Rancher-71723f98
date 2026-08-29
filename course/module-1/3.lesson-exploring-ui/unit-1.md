@@ -17,11 +17,11 @@ In the previous lesson you installed Rancher from the command line. This lesson 
 _Welcome to Rancher - the dashboard you will explore in this lesson._
 ::
 
-Rancher is already installed and running on this playground, so you can go straight to using it. When you need a terminal, use the :tab[**dev-machine**]{name="dev-machine"} tab - your workstation, with `kubectl` already pointed at the cluster.
+Rancher is already installed and running on this playground, so you can go straight to using it. When you need a terminal, use the :tab{text='dev-machine' machine='dev-machine'} tab - your workstation, with `kubectl` already pointed at the cluster.
 
 ## Step 1: Open the Rancher UI
 
-Open the Rancher web interface by clicking the :tab[**Rancher**]{name="Rancher"} tab. It opens in a new browser tab, and you land on the login screen.
+Open the Rancher web interface by clicking the :tab{text='Rancher' name='Rancher'} tab. It opens in a new browser tab, and you land on the login screen.
 
 ::remark-box
 ---
@@ -69,7 +69,7 @@ Copy that generated password before you continue - Rancher only shows it once. I
 :summary: Lost the password? Reset it from the CLI
 ---
 
-Rancher stores the admin credentials in the cluster, and it ships a `reset-password` helper inside the `rancher` pod. Switch to the :tab[**dev-machine**]{name="dev-machine"} terminal (your workstation, where `kubectl` is configured) and run the following. It finds a running `rancher` pod and executes `reset-password` inside it:
+Rancher stores the admin credentials in the cluster, and it ships a `reset-password` helper inside the `rancher` pod. Switch to the :tab{text='dev-machine' machine='dev-machine'} terminal (your workstation, where `kubectl` is configured) and run the following. It finds a running `rancher` pod and executes `reset-password` inside it:
 
 ```bash
 kubectl -n cattle-system exec \
@@ -133,7 +133,7 @@ Alongside the cluster list you will also see:
 - **Import Existing** - registers an already-running cluster with Rancher.
 - **Create** - provisions a brand-new downstream cluster through Rancher.
 
-You can confirm from your workstation that "local" is the same three-node K3s cluster you have been working with. In the :tab[**dev-machine**]{name="dev-machine"} terminal:
+You can confirm from your workstation that "local" is the same three-node K3s cluster you have been working with. In the :tab{text='dev-machine' machine='dev-machine'} terminal:
 
 ```bash
 kubectl get nodes

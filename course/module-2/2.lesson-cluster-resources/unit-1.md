@@ -8,7 +8,7 @@ name: projects-namespaces-rbac
 
 When more than one team shares a cluster, you need ways to organize resources, cap what each team can consume, and control who can do what. Kubernetes gives you **namespaces** and **RBAC** for this. Rancher adds one more layer on top - **Projects** - that makes managing groups of namespaces far easier. This lesson is where the "what's a Project?" question from the last lesson gets its full answer.
 
-Open the :tab[**Rancher**]{name="Rancher"} tab for the UI, and use the :tab[**dev-machine**]{name="dev-machine"} terminal for `kubectl`.
+Open the :tab{text='Rancher' name='Rancher'} tab for the UI, and use the :tab{text='dev-machine' machine='dev-machine'} terminal for `kubectl`.
 
 <!-- [image placeholder] rancher-projects-overview.png - Projects/Namespaces page showing projects grouping namespaces -->
 

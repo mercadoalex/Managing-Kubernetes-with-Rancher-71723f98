@@ -6,14 +6,14 @@ title: Installing Rancher on K3s
 name: installing-rancher-on-k3s
 ---
 
-This lesson walks you through a full Rancher installation on a K3s cluster. You will install cert-manager for TLS certificate management, then install Rancher itself using Helm, exposing it through the Traefik ingress controller that ships with K3s. Run every command in this lesson from the :tab[**dev-machine**]{name="dev-machine"} terminal.
+This lesson walks you through a full Rancher installation on a K3s cluster. You will install cert-manager for TLS certificate management, then install Rancher itself using Helm, exposing it through the Traefik ingress controller that ships with K3s. Run every command in this lesson from the :tab{text='dev-machine' machine='dev-machine'} terminal.
 
 ::remark-box
 ---
 kind: warning
 ---
 
-**Use the `dev-machine` terminal for every command in this lesson.** This playground has several machines, and each terminal tab logs you into a different one. The `dev-machine` is your workstation - it has `kubectl` and `helm` installed. Switch to the :tab[**dev-machine**]{name="dev-machine"} tab before you begin and stay there throughout.
+**Use the `dev-machine` terminal for every command in this lesson.** This playground has several machines, and each terminal tab logs you into a different one. The `dev-machine` is your workstation - it has `kubectl` and `helm` installed. Switch to the :tab{text='dev-machine' machine='dev-machine'} tab before you begin and stay there throughout.
 
 This mirrors how you would work in the real world: an operator manages a cluster from their own workstation using cluster credentials, rather than logging into the control-plane node directly. cert-manager and Rancher are deployed *into the cluster* with Helm, which talks to the Kubernetes API server over the network - so you never need a shell on the control plane, and you never install anything on the worker nodes by hand. You declare *what* should run; Kubernetes decides *where* it runs.
 
@@ -29,7 +29,7 @@ Before anything else, make sure your terminal is on `dev-machine`. Print the mac
 hostname
 ```
 
-It must return `dev-machine`. If it shows anything else (like `cplane-01` or `node-01`), switch to the :tab[**dev-machine**]{name="dev-machine"} terminal tab and run it again.
+It must return `dev-machine`. If it shows anything else (like `cplane-01` or `node-01`), switch to the :tab{text='dev-machine' machine='dev-machine'} terminal tab and run it again.
 
 ::simple-task
 ---

@@ -132,14 +132,14 @@ Rancher's core value is managing many clusters from one place. In this challenge
 
 The playground gives you two separate Kubernetes clusters:
 
-- The **upstream** cluster runs Rancher. It is the `local` cluster, on the `rancher-server` machine. You reach it with `kubectl` from the :tab[**dev-machine**]{name="dev-machine"} workstation.
-- The **downstream** cluster is a fresh, empty K3s cluster on the :tab[**downstream-01**]{name="downstream-01"} machine. Rancher does not know about it yet.
+- The **upstream** cluster runs Rancher. It is the `local` cluster, on the `rancher-server` machine. You reach it with `kubectl` from the :tab{text='dev-machine' machine='dev-machine'} workstation.
+- The **downstream** cluster is a fresh, empty K3s cluster on the :tab{text='downstream-01' machine='downstream-01'} machine. Rancher does not know about it yet.
 
 Your task: import the downstream cluster into Rancher so it appears as a managed, Active cluster alongside `local`.
 
 ## Step 1: Register the Cluster in Rancher
 
-Open the :tab[**Rancher**]{name="Rancher"} tab, create a **Generic** cluster import, and give it a name. Rancher will show you a registration command.
+Open the :tab{text='Rancher' name='Rancher'} tab, create a **Generic** cluster import, and give it a name. Rancher will show you a registration command.
 
 ::simple-task
 ---
@@ -162,7 +162,7 @@ In the Rancher UI, go to the cluster management area and choose **Import Existin
 
 ## Step 2: Run the Registration Command on the Downstream Cluster
 
-Take the registration command Rancher gave you and run it on the downstream cluster - in the :tab[**downstream-01**]{name="downstream-01"} terminal, whose `kubectl` targets the downstream K3s. This installs the Rancher cluster agent, which connects back to Rancher and completes the import.
+Take the registration command Rancher gave you and run it on the downstream cluster - in the :tab{text='downstream-01' machine='downstream-01'} terminal, whose `kubectl` targets the downstream K3s. This installs the Rancher cluster agent, which connects back to Rancher and completes the import.
 
 ::simple-task
 ---
@@ -180,5 +180,5 @@ The downstream cluster is Active and fully managed by Rancher. Well done.
 ---
 :summary: Hint 2 - the cluster is registered but stuck at Pending
 ---
-A cluster that appears but never goes Active usually means the agent did not start on the downstream side. Make sure you ran the registration command in the :tab[**downstream-01**]{name="downstream-01"} terminal (not on the workstation), and that its pods in the `cattle-system` namespace are coming up. If Rancher offered an "insecure" variant of the command, use it - the playground's Rancher serves a self-signed certificate.
+A cluster that appears but never goes Active usually means the agent did not start on the downstream side. Make sure you ran the registration command in the :tab{text='downstream-01' machine='downstream-01'} terminal (not on the workstation), and that its pods in the `cattle-system` namespace are coming up. If Rancher offered an "insecure" variant of the command, use it - the playground's Rancher serves a self-signed certificate.
 ::

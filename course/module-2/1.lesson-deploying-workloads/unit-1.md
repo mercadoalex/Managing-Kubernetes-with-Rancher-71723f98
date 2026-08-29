@@ -8,13 +8,13 @@ name: deploying-and-exposing-applications
 
 Now that you can navigate Rancher, it is time to put real workloads on the cluster. In this lesson you will deploy an application through the Rancher UI, confirm it from the command line, expose it with a Service, and scale it - seeing throughout how Rancher's visual actions map to plain Kubernetes objects.
 
-Rancher is already installed on this playground. Open the UI with the :tab[**Rancher**]{name="Rancher"} tab, and use the :tab[**dev-machine**]{name="dev-machine"} terminal when you need `kubectl` (it is already pointed at the cluster).
+Rancher is already installed on this playground. Open the UI with the :tab{text='Rancher' name='Rancher'} tab, and use the :tab{text='dev-machine' machine='dev-machine'} terminal when you need `kubectl` (it is already pointed at the cluster).
 
 <!-- [image placeholder] rancher-workload-overview.png - the Workload section of the cluster explorer -->
 
 ## Step 1: Create a Namespace
 
-Keep this lesson's work tidy in its own namespace. You can create it in the UI (as you did in the last challenge) or from the terminal - here we use the terminal for speed. In the :tab[**dev-machine**]{name="dev-machine"} terminal:
+Keep this lesson's work tidy in its own namespace. You can create it in the UI (as you did in the last challenge) or from the terminal - here we use the terminal for speed. In the :tab{text='dev-machine' machine='dev-machine'} terminal:
 
 ```bash
 kubectl create namespace demo
@@ -60,7 +60,7 @@ The `web` deployment is running.
 
 ## Step 3: See It From the Command Line
 
-The deployment you just made in the UI is a normal Kubernetes object. Verify it from the :tab[**dev-machine**]{name="dev-machine"} terminal:
+The deployment you just made in the UI is a normal Kubernetes object. Verify it from the :tab{text='dev-machine' machine='dev-machine'} terminal:
 
 ```bash
 kubectl -n demo get deployments
