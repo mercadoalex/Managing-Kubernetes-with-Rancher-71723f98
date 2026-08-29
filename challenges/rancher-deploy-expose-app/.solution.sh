@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Runs on the dev-machine workstation, using the pre-provisioned kubeconfig.
+export KUBECONFIG="$HOME/.kube/config"
+
 # Create the namespace
 kubectl create namespace demo
 
@@ -26,7 +29,7 @@ metadata:
   name: nginx-ingress
   namespace: demo
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
   - host: nginx.localhost
     http:
@@ -41,4 +44,4 @@ spec:
 EOF
 
 examinerctl task wait verify_ingress --timeout 30s
-examinerctl task wait verify_http_reachable --timeout 60s
+examinerctl task wait verify_http_reachable --timeout 90s

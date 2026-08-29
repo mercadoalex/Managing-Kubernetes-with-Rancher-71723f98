@@ -47,7 +47,7 @@ If the endpoints list is empty, the pods are not ready yet or the selector does 
 
 ## Route Traffic with an Ingress
 
-The ingress controller is already installed and configured to watch ingresses across namespaces. Create an ingress that sends a host to the `nginx` service:
+K3s ships the Traefik ingress controller, so no controller install is needed. Create an ingress that sends a host to the `nginx` service, using the `traefik` ingress class:
 
 ```bash
 cat <<EOF | kubectl apply -f -
@@ -57,7 +57,7 @@ metadata:
   name: nginx-ingress
   namespace: demo
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
   - host: nginx.localhost
     http:
@@ -74,10 +74,10 @@ EOF
 
 ## Verify Reachability
 
-You do not need real DNS - send the matching `Host` header to the node itself:
+You do not need real DNS - send the matching `Host` header to Traefik on the control-plane node (`172.16.0.2`):
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' -H "Host: nginx.localhost" http://127.0.0.1
+curl -s -o /dev/null -w '%{http_code}\n' -H "Host: nginx.localhost" http://172.16.0.2
 ```
 
-A `200` means traffic is flowing from the ingress controller through the service to the NGINX pods. Everything you just built appears in the Rancher UI under the cluster's Workload and Service Discovery sections.
+A `200` means traffic is flowing from Traefik through the service to the NGINX pods. Everything you just built appears in the Rancher UI under the cluster's Workload and Service Discovery sections.

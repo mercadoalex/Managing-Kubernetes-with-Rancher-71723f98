@@ -1,0 +1,194 @@
+kind: playground
+
+# NOTE: `name` gets a unique suffix appended by the platform on creation
+# (e.g. rancher-k3s-ab12cd34). Use the suffixed name that `labctl playground
+# create` prints in all subsequent commands and in lesson `playground.name`
+# references. See playgrounds/README.md for the build procedure.
+name: rancher-k3s
+
+title: K3s with Rancher Pre-Installed
+
+description: |
+  A multi-node K3s cluster with cert-manager and Rancher already installed and
+  reachable through Traefik. Used by the post-install lessons of the "Managing
+  Kubernetes with Rancher" course so students land in a ready-to-use Rancher
+  environment without reinstalling it each time.
+
+categories:
+  - kubernetes
+
+playground:
+  networks:
+    - name: local
+      subnet: 172.16.0.0/24
+
+  machines:
+    - name: dev-machine
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            Rancher is pre-installed on this cluster and reachable at
+            https://rancher.localhost (bootstrap password: admin).
+            Run `kubectl -n cattle-system get pods` to check its status.
+      drives:
+        - source: k3s-dev-machine
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.5/24
+
+    - name: cplane-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-cplane
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+
+    - name: node-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.3/24
+
+    - name: node-02
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.4/24
+
+  tabs:
+    - kind: ide
+      machine: dev-machine
+    - kind: kexp
+      machine: dev-machine
+    - kind: terminal
+      machine: dev-machine
+    - kind: terminal
+      machine: cplane-01
+    # Rancher is served over PLAIN HTTP via a NodePort (30080), and this tab
+    # points at it without tls/hostRewrite. This is deliberate and VALIDATED:
+    # the iximiuz proxy forwards ws:// (Rancher's dashboard WebSocket) but not
+    # wss://, so a plain-HTTP NodePort is what makes the full dashboard work in
+    # the browser with zero student tooling. See playgrounds/README.md.
+    - kind: http-port
+      name: Rancher
+      machine: cplane-01
+      number: 30080
+      target: window
+
+  initTasks:
+    # Production-faithful model: the student works from the dev-machine
+    # workstation (which already has kubectl + helm), never on the control
+    # plane. This task pulls the cluster's kubeconfig onto dev-machine and
+    # rewrites the API server address from 127.0.0.1 to the control-plane IP
+    # so kubectl/helm reach the cluster over the network, just like a real
+    # operator using supplied credentials.
+    init_kubeconfig_devmachine:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 180
+      run: |
+        # Wait until the control-plane node is reachable and k3s has written
+        # its kubeconfig, then fetch it over SSH (passwordless between VMs).
+        for i in $(seq 1 45); do
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 cplane-01 \
+               'sudo test -f /etc/rancher/k3s/k3s.yaml' 2>/dev/null; then
+            break
+          fi
+          sleep 2
+        done
+        mkdir -p "$HOME/.kube"
+        ssh -o StrictHostKeyChecking=no cplane-01 'sudo cat /etc/rancher/k3s/k3s.yaml' \
+          | sed 's/127.0.0.1/172.16.0.2/' > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" \
+          || echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        export KUBECONFIG="$HOME/.kube/config"
+        kubectl get nodes
+
+    # cert-manager issues Rancher's TLS certificates. Install it from the
+    # workstation with helm, using the kubeconfig set up above.
+    init_cert_manager:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_kubeconfig_devmachine
+      timeout_seconds: 300
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+        helm install cert-manager jetstack/cert-manager \
+          --namespace cert-manager \
+          --create-namespace \
+          --set crds.enabled=true
+        kubectl -n cert-manager rollout status deployment/cert-manager --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
+
+    # Install Rancher behind the Traefik ingress that ships with k3s, driven
+    # from the dev-machine workstation.
+    init_rancher:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_cert_manager
+      timeout_seconds: 600
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+        helm repo update
+        kubectl create namespace cattle-system
+        # tls=external: Rancher serves plain HTTP (no forced HTTPS redirect) and
+        # trusts an upstream proxy for TLS. We then expose it as a NodePort so
+        # the iximiuz http-port tab can reach it over plain HTTP and forward the
+        # dashboard's ws:// WebSocket. hostname is required by the chart but we
+        # reach Rancher by NodePort, not by this name.
+        helm install rancher rancher-stable/rancher \
+          --namespace cattle-system \
+          --set hostname=rancher.localhost \
+          --set bootstrapPassword=admin \
+          --set tls=external \
+          --set replicas=1
+        kubectl -n cattle-system rollout status deployment/rancher --timeout=480s
+        # Expose Rancher's HTTP port (80) as NodePort 30080 for the browser tab.
+        kubectl -n cattle-system patch svc rancher \
+          -p '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080}]}}'
+
+  accessControl:
+    canList:
+      - owner
+    canRead:
+      - owner
+    canStart:
+      - owner

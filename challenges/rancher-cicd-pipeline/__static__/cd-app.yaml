@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cd-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cd-app
+  namespace: cd-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cd-app
+  template:
+    metadata:
+      labels:
+        app: cd-app
+    spec:
+      containers:
+      - name: cd-app
+        image: nginx:1.27.2
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cd-app
+  namespace: cd-demo
+spec:
+  selector:
+    app: cd-app
+  ports:
+  - port: 80
+    targetPort: 80

@@ -24,40 +24,14 @@ createdAt: 2026-08-27
 updatedAt: 2026-08-27
 
 playground:
-  name: ubuntu-k3s-bare
+  name: rancher-k3s-e09b66ec
 
 tasks:
-  init_wait_k3s:
-    init: true
-    run: |
-      for i in $(seq 1 30); do
-        if kubectl get nodes | grep -q " Ready"; then
-          exit 0
-        fi
-        sleep 2
-      done
-      echo "K3s did not become ready in time"
-      exit 1
-
-  init_install_ingress:
-    init: true
-    needs:
-      - init_wait_k3s
-    run: |
-      if kubectl get namespace ingress-nginx >/dev/null 2>&1; then
-        exit 0
-      fi
-      helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx >/dev/null 2>&1 || true
-      helm repo update >/dev/null 2>&1
-      helm install ingress-nginx ingress-nginx/ingress-nginx \
-        --namespace ingress-nginx \
-        --create-namespace \
-        --set controller.service.type=NodePort \
-        --set controller.watchIngressWithoutClass=true
-      kubectl -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=180s
-
   verify_namespace:
+    machine: dev-machine
+    user: laborant
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       if ! kubectl get namespace demo >/dev/null 2>&1; then
         echo "Namespace 'demo' does not exist yet"
         exit 1
@@ -65,9 +39,12 @@ tasks:
       echo "Namespace 'demo' exists"
 
   verify_deployment_scaled:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_namespace
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_deployment_hint.txt
 
       if ! kubectl -n demo get deployment nginx >/dev/null 2>&1; then
@@ -99,9 +76,12 @@ tasks:
       fi
 
   verify_service:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_deployment_scaled
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_service_hint.txt
 
       if ! kubectl -n demo get svc nginx >/dev/null 2>&1; then
@@ -129,9 +109,12 @@ tasks:
       fi
 
   verify_ingress:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_service
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       rm -f /tmp/verify_ingress_hint.txt
 
       ING=$(kubectl -n demo get ingress -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
@@ -160,22 +143,28 @@ tasks:
       fi
 
   verify_http_reachable:
+    machine: dev-machine
+    user: laborant
     needs:
       - verify_ingress
     run: |
+      export KUBECONFIG=$HOME/.kube/config
       HOSTNAME=$(kubectl -n demo get ingress -o jsonpath='{.items[0].spec.rules[0].host}' 2>/dev/null)
       if [ -z "${HOSTNAME}" ]; then
         echo "Could not determine the ingress host"
         exit 1
       fi
 
-      for i in $(seq 1 15); do
-        CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${HOSTNAME}" http://127.0.0.1 2>/dev/null || true)
+      # Traefik (the k3s ingress controller) serves on the control-plane node's
+      # port 80. From the workstation we reach it at the control-plane IP,
+      # sending the Host header the ingress rule matches on.
+      for i in $(seq 1 20); do
+        CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${HOSTNAME}" http://172.16.0.2 2>/dev/null || true)
         if [ "${CODE}" = "200" ]; then
           echo "Ingress serves HTTP 200 for host ${HOSTNAME}"
           exit 0
         fi
-        sleep 2
+        sleep 3
       done
       echo "Ingress did not return HTTP 200 for host ${HOSTNAME} (last code: ${CODE})"
       exit 1
@@ -183,9 +172,9 @@ tasks:
 
 Rancher gives you a visual, form-driven way to run applications on a cluster, but every workload it creates is still plain Kubernetes underneath. In this challenge you will build the full path an application takes from a container image to reachable HTTP traffic: a Deployment, a Service, and an Ingress.
 
-The playground is a single-node K3s cluster. An NGINX ingress controller is already installed for you, so you can focus on the workload itself rather than on cluster setup.
+The playground is a multi-node K3s cluster with Rancher already installed. K3s ships the **Traefik** ingress controller out of the box, so you can focus on the workload itself rather than on cluster setup. Work from the **dev-machine** terminal (its `kubectl` is already pointed at the cluster) - or use the Rancher UI; both reach the same cluster.
 
-Your goal is to run an NGINX application in a `demo` namespace, scale it out, expose it, and route external traffic to it.
+Your goal is to run an NGINX application in a `demo` namespace, scale it out, expose it, and route external traffic to it through Traefik.
 
 ## Step 1: Create the Namespace
 
@@ -251,7 +240,7 @@ The `nginx` service is exposing the deployment on port 80.
 
 ## Step 4: Route Traffic with an Ingress
 
-Create an Ingress in the `demo` namespace that routes a host of your choice to the `nginx` service on port 80. The ingress controller is already installed and watches ingresses in all namespaces.
+Create an Ingress in the `demo` namespace that routes a host of your choice to the `nginx` service on port 80, using the **Traefik** ingress class that ships with K3s.
 
 ::simple-task
 ---
@@ -281,12 +270,12 @@ Traffic reaches nginx through the ingress. Well done.
 ---
 :summary: Hint 3
 ---
-The ingress `spec.rules[].http.paths[].backend.service.name` must point at the `nginx` service, and `spec.rules[].host` must be set. Set `ingressClassName: nginx` so the installed controller picks it up.
+The ingress `spec.rules[].http.paths[].backend.service.name` must point at the `nginx` service, and `spec.rules[].host` must be set. Set `ingressClassName: traefik` so K3s's built-in controller picks it up.
 ::
 
 ::hint-box
 ---
 :summary: "Hint: testing reachability"
 ---
-The controller is reachable on the node itself. You can simulate a browser request with `curl` by sending the right `Host` header to `127.0.0.1`, without configuring DNS.
+Traefik runs on the control-plane node and serves on its port 80. From the dev-machine you can simulate a browser request with `curl` by sending the right `Host` header to the control-plane's address (`172.16.0.2`), without configuring DNS.
 ::

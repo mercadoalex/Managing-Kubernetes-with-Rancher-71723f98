@@ -1,0 +1,129 @@
+kind: playground
+
+# NOTE: `name` gets a unique suffix appended by the platform on creation
+# (e.g. k3s-workstation-ab12cd34). Use the suffixed name that `labctl playground
+# create` prints in the install lesson's `playground.name`. See
+# playgrounds/README.md for the build procedure.
+name: k3s-workstation
+
+title: K3s with a Ready Workstation (no Rancher)
+
+description: |
+  A multi-node K3s cluster with a dev-machine workstation whose kubeconfig is
+  already set up (kubectl + helm reach the cluster over the network). Rancher is
+  NOT pre-installed - installing it is the exercise of the "Installing Rancher on
+  K3s" lesson. Use this playground for that lesson only.
+
+categories:
+  - kubernetes
+
+playground:
+  networks:
+    - name: local
+      subnet: 172.16.0.0/24
+
+  machines:
+    - name: dev-machine
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            This is your workstation. kubectl and helm are installed and already
+            pointed at the cluster - try `kubectl get nodes`.
+            In this lesson you will install Rancher onto this cluster.
+      drives:
+        - source: k3s-dev-machine
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.5/24
+
+    - name: cplane-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-cplane
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+
+    - name: node-01
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.3/24
+
+    - name: node-02
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-node
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.4/24
+
+  tabs:
+    - kind: ide
+      machine: dev-machine
+    - kind: kexp
+      machine: dev-machine
+    - kind: terminal
+      machine: dev-machine
+    - kind: terminal
+      machine: cplane-01
+
+  initTasks:
+    # Set up the dev-machine workstation's kubeconfig so plain kubectl/helm
+    # reach the cluster over the network - the student arrives with working
+    # credentials, as a consultant would. Rancher is intentionally NOT installed
+    # here; installing it is the lesson's exercise.
+    init_kubeconfig_devmachine:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 180
+      run: |
+        for i in $(seq 1 45); do
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 cplane-01 \
+               'sudo test -f /etc/rancher/k3s/k3s.yaml' 2>/dev/null; then
+            break
+          fi
+          sleep 2
+        done
+        mkdir -p "$HOME/.kube"
+        ssh -o StrictHostKeyChecking=no cplane-01 'sudo cat /etc/rancher/k3s/k3s.yaml' \
+          | sed 's/127.0.0.1/172.16.0.2/' > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" \
+          || echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        export KUBECONFIG="$HOME/.kube/config"
+        kubectl get nodes
+
+  accessControl:
+    canList:
+      - owner
+    canRead:
+      - owner
+    canStart:
+      - owner
