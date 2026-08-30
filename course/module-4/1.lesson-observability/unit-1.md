@@ -131,6 +131,15 @@ If the **Grafana** tab shows an error the first time, Grafana is not up yet - gi
 
 Once you are in, browse **Dashboards** and open one of the "Kubernetes / Compute Resources" views to see live cluster metrics. Because this cluster already runs Rancher, the graphs are full of real activity from the moment you open them. This is the same Grafana that Rancher Monitoring surfaces inside the Rancher UI.
 
+::image-box
+---
+:src: __static__/grafana-dashboards-list-v1.png
+:alt: The Grafana Dashboards list showing the pre-built dashboards that kube-prometheus-stack installs, including several Kubernetes / Compute Resources views for the cluster, namespaces, nodes, and workloads
+:max-width: 900px
+---
+_Grafana's Dashboards list, pre-populated by kube-prometheus-stack - the "Kubernetes / Compute Resources" views show live cluster metrics._
+::
+
 ## Step 4: Break Something, Then Alert on It
 
 Metrics are only half of observability - you also want to be told when something is wrong. The best way to see alerting work is to cause a real problem and watch Prometheus catch it. Deploy a pod that crashes on start, so it enters a crash loop:
@@ -174,6 +183,15 @@ Apply it from the workstation:
 ```bash
 kubectl apply -f my-alerts.yaml
 ```
+
+::image-box
+---
+:src: __static__/apply-prometheusrule-v1.png
+:alt: A terminal showing the command kubectl apply -f my-alerts.yaml and its output, prometheusrule.monitoring.coreos.com/my-alerts created, confirming the PrometheusRule object was accepted by the cluster
+:max-width: 700px
+---
+_Applying the PrometheusRule - the cluster confirms `prometheusrule.monitoring.coreos.com/my-alerts created`._
+::
 
 ::hint-box
 ---
