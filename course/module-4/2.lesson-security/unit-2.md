@@ -78,6 +78,15 @@ Kubernetes Secrets are only base64-encoded in etcd by default - encoded, not enc
 - **External secret stores** - **HashiCorp Vault**, AWS Secrets Manager, or Azure Key Vault - that hold the real secret and inject it at runtime, so it never lives in the cluster datastore.
 - **Sealed Secrets** - encrypt a secret so the ciphertext is safe to commit to Git, which fits the GitOps workflow from the Fleet lessons.
 
+::image-box
+---
+:src: __static__/secrets-encoding-vs-encryption-v1.png
+:alt: A contrast between the default state where a Kubernetes Secret is only base64-encoded in etcd and anyone with access can decode it back to plaintext, versus three hardening options - encryption at rest for etcd, an external secret store such as HashiCorp Vault that injects the secret at runtime, and Sealed Secrets that encrypt the value so the ciphertext is safe to store in Git
+:max-width: 900px
+---
+_Base64 is encoding, not encryption - a Secret in etcd is trivially decoded unless you add encryption at rest, an external store, or Sealed Secrets._
+::
+
 ## Putting It Together
 
 A hardened Rancher-managed cluster layers these controls: authenticate people against a real identity provider, authorize them by role, enforce Pod Security Standards on workloads (which you did hands-on in the previous unit), segment traffic with a policy-enforcing CNI, scan against the CIS Benchmark to catch drift, and keep secrets out of plain etcd. No single control is sufficient alone; security is the sum of the layers.
