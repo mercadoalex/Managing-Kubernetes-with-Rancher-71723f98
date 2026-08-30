@@ -26,6 +26,15 @@ Every one of these requires a *second system* to authenticate against - a runnin
 
 ::
 
+::image-box
+---
+:src: __static__/rancher-external-auth-v1.png
+:alt: A user logging in through an external identity provider such as LDAP, SAML, GitHub, or OIDC, which Rancher trusts to verify the user, then Rancher maps the user's provider groups to Rancher roles that grant access to clusters and projects
+:max-width: 900px
+---
+_Rancher delegates login to an external identity provider, then maps the user's groups to Rancher roles._
+::
+
 ## Compliance: CIS Benchmark Scanning
 
 Rancher ships a **CIS Benchmark** scanning tool that audits a cluster against the Center for Internet Security's Kubernetes Benchmark - a published checklist of hardening controls. You install it as a Rancher app, run a scan, and get a report of which controls pass, fail, or need manual review. Scans can be scheduled so you track compliance drift over time. It is the fastest way to answer "how hardened is this cluster against a recognized standard?" without auditing by hand.
@@ -50,6 +59,15 @@ kind: warning
 
 There is an important catch: NetworkPolicy objects are only enforced if the cluster's **CNI plugin supports them**. This playground's K3s uses the default Flannel CNI, which does **not** enforce NetworkPolicy - you could create the objects, but nothing would honor them. Production clusters that rely on network policy run a policy-enforcing CNI such as **Calico**, **Cilium**, or Canal. That is why network segmentation is described here rather than demonstrated: teaching a control that silently does nothing would be worse than not teaching it.
 
+::
+
+::image-box
+---
+:src: __static__/network-policy-segmentation-v1.png
+:alt: Two states of pod-to-pod traffic in a namespace. On the left, with no policy, every pod can reach every other pod. On the right, a default-deny NetworkPolicy blocks all traffic and an allow rule permits only the frontend pod to reach the backend pod, while a note warns that a policy-enforcing CNI such as Calico or Cilium is required for the rules to take effect
+:max-width: 900px
+---
+_NetworkPolicy turns an open namespace into default-deny plus explicit allow rules - but only a policy-enforcing CNI actually applies them._
 ::
 
 ## Secrets Management
