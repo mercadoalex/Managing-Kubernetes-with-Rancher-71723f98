@@ -12,7 +12,7 @@ Rancher ships a purpose-built tool for this: the **Rancher Backup** operator (`r
 
 ::image-box
 ---
-:src: __static__/rancher-backup-flow-v1.png
+:src: __static__/rancher-backup-flow-v2.png
 :alt: The Rancher Backup operator reading the Rancher management state selected by a ResourceSet, packaging it into a tar.gz archive, and writing that archive to a persistent volume backed by the local-path storage class
 :max-width: 900px
 ---
