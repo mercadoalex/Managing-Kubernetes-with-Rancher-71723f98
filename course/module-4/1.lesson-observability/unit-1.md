@@ -23,6 +23,24 @@ Rancher offers a one-click **Monitoring** app (under Cluster Tools in the UI) th
 
 ::details-box
 ---
+:summary: New to this? What is Prometheus?
+---
+
+**Prometheus** is the metrics engine. It periodically **scrapes** numeric measurements - CPU usage, memory, request counts, pod restart totals - from the cluster's components and your workloads, and stores them as time series (a value tagged with labels, recorded over time). You query those series with its own language, **PromQL**, and Prometheus also evaluates alerting rules against them. In this stack it is the source of truth for "what is happening in the cluster, measured over time." It is a graduated CNCF project and the de facto standard for Kubernetes metrics.
+
+::
+
+::details-box
+---
+:summary: New to this? What is Grafana?
+---
+
+**Grafana** is the visualization layer. On its own it stores no metrics - it connects to a data source (here, Prometheus) and renders the numbers as dashboards: graphs, gauges, and tables you can read at a glance. The `kube-prometheus-stack` ships Grafana pre-configured with Prometheus as its data source and a set of ready-made Kubernetes dashboards, so you get useful views the moment it starts. Where Prometheus answers queries, Grafana makes the answers human-friendly.
+
+::
+
+::details-box
+---
 :summary: Why install the chart directly instead of clicking "Monitoring" in Rancher?
 ---
 
