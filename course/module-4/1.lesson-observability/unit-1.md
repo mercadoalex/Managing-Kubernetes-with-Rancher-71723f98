@@ -382,7 +382,18 @@ Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose *
 _A new dashboard offers an Auto grid or Custom grid layout - Auto grid is fine here._
 ::
 
-Now add a panel: click the **+ Add new element** button, choose **Panel**, then **Configure** it to open the panel editor. The data source should already be **Prometheus** (the stack wired it in as the default). In the **Query** section below the graph, switch the query mode from **Builder** to **Code** - notice how the UI changes to a free-text field reading _Enter a PromQL query_. Type:
+Now add a panel: click the **+ Add new element** button and choose **Panel**. The empty panel appears with a blue **Configure visualization** button in its middle - click it to open the panel editor.
+
+::image-box
+---
+:src: __static__/grafana-custom-panel-v1.png
+:alt: A freshly added empty Grafana panel showing a blue Configure visualization button in the middle, which opens the panel editor
+:max-width: 900px
+---
+_A new panel shows a blue "Configure visualization" button in the middle - click it to open the panel editor._
+::
+
+The data source should already be **Prometheus** (the stack wired it in as the default). In the **Query** section below the graph, switch the query mode from **Builder** to **Code** - notice how the UI changes to a free-text field reading _Enter a PromQL query_. Type:
 
 ```
 kube_pod_container_status_restarts_total{namespace="demo"}
@@ -408,11 +419,11 @@ Give the panel a title like "Crasher restarts", then **Save** the dashboard with
 
 ::image-box
 ---
-:src: __static__/grafana-custom-panel-v1.png
-:alt: A custom Grafana dashboard with a single time-series panel titled Crasher restarts, showing the crasher pod's restart count climbing over time, built from the PromQL query kube_pod_container_status_restarts_total for the demo namespace
+:src: __static__/grafana-panel-result-v1.png
+:alt: A saved custom Grafana dashboard with a single time-series panel titled Crasher restarts, showing the crasher pod's restart count climbing over time, built from the PromQL query kube_pod_container_status_restarts_total for the demo namespace
 :max-width: 900px
 ---
-_A custom panel graphing the crasher's restart count - built from a single PromQL query._
+_The finished panel graphing the crasher's restart count - built from a single PromQL query._
 ::
 
 ::simple-task
