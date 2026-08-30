@@ -30,6 +30,15 @@ Every one of these requires a *second system* to authenticate against - a runnin
 
 Rancher ships a **CIS Benchmark** scanning tool that audits a cluster against the Center for Internet Security's Kubernetes Benchmark - a published checklist of hardening controls. You install it as a Rancher app, run a scan, and get a report of which controls pass, fail, or need manual review. Scans can be scheduled so you track compliance drift over time. It is the fastest way to answer "how hardened is this cluster against a recognized standard?" without auditing by hand.
 
+::image-box
+---
+:src: __static__/cis-benchmark-scan-v1.png
+:alt: The Rancher CIS Benchmark scanner reading a cluster and the CIS Kubernetes Benchmark checklist, then producing a report that groups controls into pass, fail, and manual-review, with a scheduler that reruns the scan to track compliance drift
+:max-width: 900px
+---
+_The CIS Benchmark scanner audits the cluster against a published checklist and reports which controls pass, fail, or need a manual check._
+::
+
 ## Network Policy: Segmenting Traffic
 
 By default, every pod in a Kubernetes cluster can talk to every other pod. **NetworkPolicy** objects let you lock that down - default-deny all traffic, then allow only the connections each workload actually needs, isolating namespaces and restricting egress to known endpoints.
