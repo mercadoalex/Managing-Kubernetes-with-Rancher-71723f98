@@ -90,16 +90,25 @@ tasks:
     timeout_seconds: 480
     run: |
       export KUBECONFIG=$HOME/.kube/config
-      for i in $(seq 1 40); do
-        FIRING=$(kubectl -n monitoring exec \
-          prometheus-monitoring-kube-prometheus-prometheus-0 -c prometheus -- \
-          wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=ALERTS{alertstate="firing"}' 2>/dev/null \
+      # The Prometheus container is distroless (no shell, no wget/curl), so we
+      # cannot query it via kubectl exec. Instead we port-forward the Prometheus
+      # service to the workstation and curl its API. A fresh high local port
+      # avoids colliding with any port-forward the student left running, and the
+      # retry loop absorbs the time the forward needs to establish.
+      for i in $(seq 1 30); do
+        pkill -f "port-forward.*19490:9090" 2>/dev/null || true
+        kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 19490:9090 >/tmp/pf_gate.log 2>&1 &
+        PF=$!
+        sleep 8
+        FIRING=$(curl -sf -G 'http://127.0.0.1:19490/api/v1/query' \
+          --data-urlencode 'query=ALERTS{alertstate="firing"}' 2>/dev/null \
           | grep -o '"alertstate":"firing"' | head -1)
+        kill $PF 2>/dev/null || true
         if [ -n "${FIRING}" ]; then
           echo "An alert is firing"
           exit 0
         fi
-        sleep 10
+        sleep 8
       done
       echo "No alert is firing yet. Make sure your crash-looping pod is restarting and your rule's condition is met."
       exit 1

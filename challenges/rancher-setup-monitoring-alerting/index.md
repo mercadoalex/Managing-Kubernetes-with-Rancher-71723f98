@@ -154,18 +154,25 @@ tasks:
       rm -f /tmp/verify_firing_hint.txt
       export KUBECONFIG=$HOME/.kube/config
       # The alert must actually be FIRING, not just defined - proof a real
-      # condition tripped it. Query Prometheus from inside its own pod. Crash
-      # loop backoff + scrape + the rule's for: window take a few minutes.
-      for i in $(seq 1 40); do
-        FIRING=$(kubectl -n monitoring exec \
-          prometheus-monitoring-kube-prometheus-prometheus-0 -c prometheus -- \
-          wget -qO- 'http://127.0.0.1:9090/api/v1/query?query=ALERTS{alertstate="firing"}' 2>/dev/null \
+      # condition tripped it. The Prometheus container is distroless (no shell,
+      # no wget/curl), so we port-forward its service to the workstation and
+      # curl the API. A fresh high local port avoids colliding with any
+      # port-forward the learner left running; the retry loop absorbs both the
+      # forward's startup and the crash-loop + scrape + for: window.
+      for i in $(seq 1 30); do
+        pkill -f "port-forward.*19490:9090" 2>/dev/null || true
+        kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 19490:9090 >/tmp/pf_gate.log 2>&1 &
+        PF=$!
+        sleep 8
+        FIRING=$(curl -sf -G 'http://127.0.0.1:19490/api/v1/query' \
+          --data-urlencode 'query=ALERTS{alertstate="firing"}' 2>/dev/null \
           | grep -o '"alertstate":"firing"' | head -1)
+        kill $PF 2>/dev/null || true
         if [ -n "${FIRING}" ]; then
           echo "An alert is firing"
           exit 0
         fi
-        sleep 10
+        sleep 8
       done
       echo "No alert is firing yet. Ensure a pod is crash-looping and your rule's condition is met." \
         | tee /tmp/verify_firing_hint.txt
