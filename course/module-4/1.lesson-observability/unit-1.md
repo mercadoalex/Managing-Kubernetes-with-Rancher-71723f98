@@ -357,6 +357,20 @@ _The operator only loads PrometheusRules whose labels match its selector; a rule
 
 Browsing the built-in dashboards is one thing; building your own is where Grafana earns its place. Now that the crasher pod has been restarting for a few minutes, its restart count is a perfect live metric to graph. You will create a small dashboard with a single panel that tracks it.
 
+::hint-box
+---
+:summary: Forgot the Grafana login?
+---
+Grafana logs in with the username `admin`. The password was generated at install and is kept in a Kubernetes secret - reprint it any time from the :tab{text='dev-machine' machine='dev-machine'} terminal:
+
+```bash
+kubectl -n monitoring get secret monitoring-grafana \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo
+```
+
+Copy that value into the Grafana login. If the **Grafana** tab is blank or shows a connection error, Grafana's proxy just needs a moment - reload the tab a couple of times.
+::
+
 Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose **Dashboards > New > New dashboard**, then **Add visualization**. When prompted for a data source, pick **Prometheus** (the stack wired it in as the default). In the query editor, switch to the code editor and enter this PromQL:
 
 ```
