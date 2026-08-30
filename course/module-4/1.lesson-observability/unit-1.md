@@ -382,7 +382,7 @@ Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose *
 _A new dashboard offers an Auto grid or Custom grid layout - Auto grid is fine here._
 ::
 
-Now add a panel: click the **+ Add new element** button and choose **Panel**, then use the **+** on the panel to open its editor. When prompted for a data source, pick **Prometheus** (the stack wired it in as the default). In the query editor, switch from **Builder** to **Code** and enter this PromQL:
+Now add a panel: click the **+ Add new element** button, choose **Panel**, and open its editor to **Configure** it. The data source should already be **Prometheus** (the stack wired it in as the default). In the query row, click **{} Edit as code** to type raw PromQL, then enter:
 
 ```
 kube_pod_container_status_restarts_total{namespace="demo"}
