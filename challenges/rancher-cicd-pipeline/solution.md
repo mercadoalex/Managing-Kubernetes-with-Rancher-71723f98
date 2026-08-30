@@ -1,70 +1,60 @@
 ---
-title: Deliver a Pinned Image Through Fleet
+title: Ship a Change Through Fleet and Gitea
 ---
 
-The CI half of a pipeline ends by writing a specific image tag into a set of manifests. This challenge starts where that leaves off: hand those manifests to Fleet and let it deliver them. Because you cannot push to a Git host from inside the playground, the `fleet apply` CLI stands in for the GitRepo - it turns a local directory into the same Bundle a GitRepo would produce.
+Continuous delivery with Fleet is a loop: Fleet watches a Git repository, and whatever you commit there is what runs on the cluster. This challenge runs that loop against the self-hosted Gitea server, in two moves - point Fleet at the repo, then push a change and watch it land.
 
 <!--more-->
 
-## Prepare the Manifests
+## Point Fleet at the Gitea Repository
 
-Create a directory with a Deployment named `cd-app` in a `cd-demo` namespace, pinned to a specific image tag (never `latest`):
+Create a GitRepo in `fleet-local` that points at the Gitea repo. Use the server's IP address, because Fleet clones from a pod inside the cluster and the cluster DNS does not resolve the `gitea` machine name:
 
 ```bash
-mkdir -p /tmp/cd-manifests
-cat <<EOF > /tmp/cd-manifests/cd-app.yaml
-apiVersion: v1
-kind: Namespace
+cat <<EOF | kubectl apply -f -
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
 metadata:
-  name: cd-demo
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cd-app
-  namespace: cd-demo
+  name: web-app
+  namespace: fleet-local
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: cd-app
-  template:
-    metadata:
-      labels:
-        app: cd-app
-    spec:
-      containers:
-      - name: cd-app
-        image: nginx:1.27.2
-        ports:
-        - containerPort: 80
+  repo: http://172.16.0.4:3000/student/sample-app
+  branch: main
+  paths:
+  - manifests
+  targets:
+  - clusterSelector: {}
 EOF
 ```
 
-The pinned `1.27.2` tag is what a CI job would have written after building and pushing the image.
-
-## Deliver with Fleet
-
-Turn the directory into a Bundle and apply it. `fleet apply` reads the manifests, wraps them in a Bundle, and Fleet delivers it to the local cluster:
+Fleet clones the repo, builds a bundle, and applies it. The `web` Deployment appears with one replica:
 
 ```bash
-fleet apply --namespace fleet-local cd-app /tmp/cd-manifests
+kubectl -n fleet-local get gitrepo
+kubectl get deploy web
 ```
 
-Watch the bundle and the workload:
+## Commit a Change and Let Fleet Reconcile
+
+Now change the app through Git, not through `kubectl`. Clone the repository, bump the replica count, commit, and push:
 
 ```bash
-kubectl -n fleet-local get bundles
-kubectl -n cd-demo get deployment cd-app
+cd /tmp
+git clone http://student:student@172.16.0.4:3000/student/sample-app.git
+cd sample-app
+sed -i 's/replicas: 1/replicas: 3/' manifests/web.yaml
+git -c user.email=student@example.com -c user.name=student commit -am "Scale web to 3 replicas"
+git push origin main
 ```
 
-## Confirm the Contract
-
-Fleet now owns the deployment, and the running image is exactly the pinned tag from the manifest:
+Then watch the cluster follow Git:
 
 ```bash
-kubectl -n cd-demo get deployment cd-app -o jsonpath='{.spec.template.spec.containers[0].image}'
-kubectl -n cd-demo get deployment cd-app -o jsonpath='{.metadata.labels}'
+kubectl get deploy web -w
 ```
 
-The image reads `nginx:1.27.2`, and the labels carry Fleet's ownership metadata. To ship a new version, a CI job would rewrite the tag and re-apply - Fleet reconciles the deployment to match, which is the whole point of GitOps-driven continuous delivery.
+Within a minute Fleet polls Gitea, sees the new commit, and scales `web` to three replicas. You never ran `kubectl scale` - the commit drove the rollout, which is the whole point of GitOps-driven continuous delivery. To ship any future change, you would edit the manifest, commit, and push again; Fleet reconciles the cluster to match every time.
+
+## Why the IP and Not the Hostname
+
+The one thing that trips people up here is the repo URL. From the workstation you can reach the Git server as `gitea:3000`, but Fleet's clone job runs as a pod inside the cluster, and cluster pods resolve names through the cluster DNS, which knows nothing about the `gitea` VM. Using the node IP `172.16.0.4:3000` sidesteps DNS entirely and always works.

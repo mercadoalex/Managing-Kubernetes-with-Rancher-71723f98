@@ -10,7 +10,8 @@ Each custom playground is defined once by a manifest in its own folder here, bui
 |-----------------|----------------------|------|---------|
 | `k3s-workstation` | `k3s-workstation-1430c761` | `k3s` | The install lesson (`module-1/2.lesson-installing-rancher`) - workstation kubeconfig ready, but Rancher NOT installed (installing it is the exercise) |
 | `rancher-k3s` | `rancher-k3s-e09b66ec` | `k3s` | All post-install lessons (Module 1 "Exploring the UI" through Module 2) and single-cluster Rancher-dependent challenges |
-| `rancher-k3s-downstream` | `rancher-k3s-downstream-54528e97` | `flexbox` | Module 3 advanced lessons that need a second, importable cluster (multi-cluster management, and the import-downstream-cluster challenge) |
+| `rancher-k3s-downstream` | `rancher-k3s-downstream-54528e97` | `flexbox` | Module 3 multi-cluster + Fleet lessons (import-downstream-cluster challenge; the Fleet GitOps lesson also runs here) |
+| `rancher-k3s-gitea` | `rancher-k3s-gitea-6cdd37fb` | `flexbox` | Module 3 CI/CD lesson - Rancher + a self-hosted Gitea Git server for the commit-and-reconcile GitOps loop (cicd-pipeline challenge) |
 
 > All three playgrounds pre-configure the `dev-machine` workstation's kubeconfig so the student uses plain `kubectl`/`helm` from their workstation and never touches a control plane. The differences: `k3s-workstation` has no Rancher (installing it is the exercise); `rancher-k3s` has Rancher pre-installed on a single cluster; `rancher-k3s-downstream` has Rancher pre-installed on an upstream cluster PLUS a separate empty downstream cluster to import.
 
@@ -113,6 +114,56 @@ labctl playground destroy <play-id>   # tear down test instances
 - **Resource budget:** Rancher wants ~2 vCPU / 4 GiB on its own. With the downstream node (~1 vCPU / 2 GiB) and the workstation (~1 vCPU / 1 GiB), the playground totals ~4 vCPU / ~7 GiB. The free tier caps a single VM at 2 vCPU / 4 GiB and a playground at 5 vCPU / 8 GiB, so `rancher-server` sits right at the per-VM ceiling and the whole topology is realistically a **paid-plan** playground. Requests above budget are scaled down proportionally, which would starve Rancher - so do not run this on free tier expecting a healthy Rancher.
 - Init-task provisioning means both clusters build on the loading screen each boot (Rancher install dominates the wait). Same baked-image optimization path as `rancher-k3s` applies (see roadmap).
 - `flexbox` requires the full machine set in the manifest (no inherited machines), which is why every machine, network, and tab is spelled out explicitly.
+
+## `rancher-k3s-gitea` - Rancher + a self-hosted Gitea Git server (CI/CD lesson)
+
+Base: `flexbox`. Used by the Module 3 CI/CD lesson to teach the full GitOps loop with a Git server the student owns: point Fleet at a Gitea repo, then push a commit and watch Fleet reconcile the change onto the cluster.
+
+Manifest: `rancher-k3s-gitea/manifest.yaml`.
+
+### Topology (3 VMs, one shared network)
+
+| Machine | Address | Rootfs | Role |
+|---------|---------|--------|------|
+| `dev-machine` | `172.16.0.5` | `k3s-dev-machine` | Workstation: kubectl + helm + git, kubeconfig -> Rancher (local) cluster. Where GitRepos are created and commits are pushed. |
+| `rancher-server` | `172.16.0.2` | `k3s-cplane` | Single-node K3s running Rancher (self-signed) and its bundled Fleet. |
+| `gitea` | `172.16.0.4` | `docker` | Runs Gitea as a container on port 3000, seeded with a `sample-app` repo. |
+
+No downstream cluster: the CI/CD loop deploys to the local cluster via `fleet-local`, so a second cluster is not needed. Machine names resolve as hostnames, so the cluster and workstation reach Gitea at `http://gitea:3000`.
+
+### Why Gitea runs on its own machine (not a pod in the cluster)
+
+Co-locating the Git server on the very cluster it configures is a bootstrapping anti-pattern: if the cluster has a bad day you lose the source of truth you need to recover it. A separate, independent Git server is the production-faithful shape, so Gitea gets its own VM here.
+
+### How Gitea is provisioned
+
+The `init_gitea` task (on the `gitea` machine) runs Gitea as a container with `INSTALL_LOCK=true` (no setup wizard), waits for its API, then uses the Gitea API to:
+
+1. create a `student` admin user (password `student`),
+2. create a public `sample-app` repo on branch `main`,
+3. seed it with `manifests/web.yaml` (a simple nginx Deployment).
+
+Fleet then points a GitRepo at `http://gitea:3000/student/sample-app`, branch `main`, path `manifests`. Pushing a change to that file (for example, bumping `replicas`) is what the student commits to trigger a reconcile.
+
+### Rancher install
+
+Identical self-signed recipe as `rancher-k3s-downstream` (cert-manager, then Rancher with `hostname=172.16.0.2.sslip.io`, both NodePorts 30080/30443, `server-url=https://172.16.0.2.sslip.io:30443`, Rancher UI tab `tls: true` on 30443). Fleet ships with Rancher, so nothing extra is installed for GitOps.
+
+### Build / register with labctl
+
+```bash
+PLAYGROUND=$(labctl playground create rancher-k3s-gitea --base flexbox -q)
+echo "$PLAYGROUND"   # e.g. rancher-k3s-gitea-ab12cd34
+labctl playground update "$PLAYGROUND" -f rancher-k3s-gitea/manifest.yaml
+labctl playground start "$PLAYGROUND"
+labctl playground tasks "$PLAYGROUND"   # watch init_gitea, init_cert_manager, init_rancher
+```
+
+### Caveats
+
+- **Resource budget:** ~4 vCPU / ~7 GiB across 3 VMs (Rancher 2C/4G dominates). Fits the paid tier comfortably; not intended for free tier (Rancher would be starved).
+- Gitea image pinned to `gitea/gitea:1.22` - bump deliberately.
+- The seed uses HTTP basic auth (`student:student`) against the Gitea API; fine for a lab, not a production credential pattern.
 
 ## Roadmap: baked OCI rootfs image (optimization)
 

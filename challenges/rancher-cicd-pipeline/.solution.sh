@@ -1,28 +1,42 @@
 #!/bin/bash
 set -euo pipefail
 
-# Ensure the fleet CLI is available (installs it if the playground lacks it).
-if ! command -v fleet >/dev/null 2>&1; then
-  FLEET_VERSION=$(kubectl -n cattle-fleet-system get deployment fleet-controller \
-    -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null | awk -F: '{print $NF}')
-  FLEET_VERSION=${FLEET_VERSION:-v0.10.0}
-  ARCH=$(uname -m); case "${ARCH}" in x86_64) ARCH=amd64;; aarch64) ARCH=arm64;; esac
-  curl -fsSL -o /usr/local/bin/fleet \
-    "https://github.com/rancher/fleet/releases/download/${FLEET_VERSION}/fleet-linux-${ARCH}" \
-    || curl -fsSL -o /usr/local/bin/fleet \
-    "https://github.com/rancher/fleet/releases/latest/download/fleet-linux-${ARCH}"
-  chmod +x /usr/local/bin/fleet
-fi
+# CI solution for "Ship a Change Through Fleet and a Git Server".
+# Runs on the dev-machine workstation. Points Fleet at the self-hosted Gitea
+# repo, then commits a scale-up and lets Fleet reconcile it - the same loop the
+# student performs by hand.
+#
+# NOTE: the GitRepo and git URLs use the Gitea server IP (172.16.0.4:3000), not
+# the 'gitea' hostname. Fleet clones from a cluster pod, and cluster DNS does
+# not resolve VM machine names - validated live.
 
-# Fetch the pinned application manifest (a CI job would have written the tag).
-mkdir -p /tmp/cd-manifests
-wget --no-cache -O /tmp/cd-manifests/cd-app.yaml \
-  "https://labs.iximiuz.com/__static__/cd-app.yaml?t=$(date +%s)"
+export KUBECONFIG=$HOME/.kube/config
 
-# Deliver the manifests through Fleet as a Bundle (offline CD path).
-fleet apply --namespace fleet-local cd-app /tmp/cd-manifests
+# 1. Point Fleet at the Gitea repo (targets the local cluster via fleet-local).
+cat <<EOF | kubectl apply -f -
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
+metadata:
+  name: web-app
+  namespace: fleet-local
+spec:
+  repo: http://172.16.0.4:3000/student/sample-app
+  branch: main
+  paths:
+  - manifests
+  targets:
+  - clusterSelector: {}
+EOF
 
-examinerctl task wait verify_delivery_source --timeout 60s
-examinerctl task wait verify_app_running --timeout 180s
-examinerctl task wait verify_image_pinned --timeout 30s
-examinerctl task wait verify_managed_by_fleet --timeout 30s
+examinerctl task wait verify_gitrepo_to_gitea --timeout 60s
+examinerctl task wait verify_app_deployed --timeout 240s
+
+# 2. Commit a change (scale to 3) to Gitea and let Fleet reconcile it.
+rm -rf /tmp/sample-app
+git clone http://student:student@172.16.0.4:3000/student/sample-app.git /tmp/sample-app
+cd /tmp/sample-app
+sed -i 's/replicas: 1/replicas: 3/' manifests/web.yaml
+git -c user.email=student@example.com -c user.name=student commit -am "Scale web to 3 replicas"
+git push origin main
+
+examinerctl task wait verify_committed_change_reconciled --timeout 240s

@@ -1,0 +1,261 @@
+kind: playground
+
+# NOTE: `name` gets a unique suffix appended by the platform on creation
+# (e.g. rancher-k3s-gitea-ab12cd34). Use the suffixed name that
+# `labctl playground create` prints in all subsequent commands and in lesson
+# `playground.name` references. See playgrounds/README.md for the procedure.
+name: rancher-k3s-gitea
+
+title: Rancher with a Self-Hosted Gitea Git Server
+
+description: |
+  A CI/CD topology for the Module 3 GitOps lesson. A K3s cluster runs Rancher
+  with its built-in Fleet engine, and a separate machine runs a self-hosted
+  Gitea Git server seeded with a sample app repo. The student points Fleet at
+  the Gitea repo, then pushes a commit and watches Fleet reconcile the change
+  onto the cluster - the real GitOps loop, with a Git server they own.
+
+categories:
+  - kubernetes
+
+# From-scratch topology, so it uses the `flexbox` base - the only base that
+# accepts an arbitrary machine set. Gitea deliberately runs on its OWN machine
+# (not as a pod in the cluster): co-locating the Git server on the cluster it
+# feeds is a bootstrapping anti-pattern, and a separate Git server is the
+# production-faithful shape.
+playground:
+  networks:
+    # One shared network. Machine names resolve as hostnames, so the cluster can
+    # reach Gitea at http://gitea:3000 and the workstation can too.
+    - name: local
+      subnet: 172.16.0.0/24
+
+  machines:
+    # The student's workstation: kubectl + helm + git, kubeconfig points at the
+    # Rancher (local) cluster. This is where GitRepos are created and where the
+    # student clones/commits/pushes to Gitea.
+    - name: dev-machine
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            This is your workstation. Rancher is pre-installed (open the
+            "Rancher" tab). A self-hosted Gitea server runs on the gitea machine
+            (open the "Gitea" tab) and already hosts a sample app repository.
+            `kubectl` here targets the Rancher (local) cluster.
+      drives:
+        - source: k3s-dev-machine
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.5/24
+      resources:
+        cpuCount: 1
+        ramSize: 1GiB
+
+    # The Rancher cluster: single-node K3s with Rancher (and its bundled Fleet)
+    # installed on top. Same validated self-signed install as the two-cluster
+    # playground - self-signed mode is required so cacerts is populated and
+    # agents/UI work; see the downstream playground's notes.
+    - name: rancher-server
+      users:
+        - name: root
+        - name: laborant
+          default: true
+      drives:
+        - source: k3s-cplane
+          mount: /
+          size: 30GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.2/24
+      resources:
+        cpuCount: 2
+        ramSize: 4GiB
+
+    # The Git server: a Docker-enabled VM running Gitea as a container. It is
+    # seeded with a sample application repo that Fleet will deploy from. Gitea is
+    # light, so a small VM is plenty.
+    - name: gitea
+      users:
+        - name: root
+        - name: laborant
+          default: true
+          welcome: |
+            This machine runs the Gitea Git server as a Docker container on port
+            3000. It hosts the sample app repository that Fleet deploys from.
+            Reach it at http://gitea:3000 (user: student, password: student).
+      drives:
+        - source: docker
+          mount: /
+          size: 20GiB
+      network:
+        interfaces:
+          - network: local
+            address: 172.16.0.4/24
+      resources:
+        cpuCount: 1
+        ramSize: 2GiB
+
+  tabs:
+    - kind: ide
+      machine: dev-machine
+    - kind: kexp
+      machine: dev-machine
+    - kind: terminal
+      machine: dev-machine
+    - kind: terminal
+      machine: gitea
+    # Rancher over self-signed HTTPS on NodePort 30443 (see the downstream
+    # playground notes for why self-signed + tls:true).
+    - kind: http-port
+      name: Rancher
+      machine: rancher-server
+      number: 30443
+      tls: true
+      target: window
+    # The Gitea web UI on port 3000 (plain HTTP - fine for a Git UI in a lab).
+    - kind: http-port
+      name: Gitea
+      machine: gitea
+      number: 3000
+      target: window
+
+  initTasks:
+    # --- Gitea: start the server and seed a sample repo ---
+    # Runs on the gitea machine. Starts Gitea as a container, waits for it, then
+    # uses Gitea's API to create a user and a repository seeded with a simple
+    # Kubernetes Deployment + Service that Fleet will deploy.
+    init_gitea:
+      init: true
+      machine: gitea
+      user: root
+      timeout_seconds: 420
+      run: |
+        set -e
+        # Start Gitea with install pre-configured so no web setup wizard is
+        # needed. SSH port is not published; we use HTTP + token for git.
+        docker run -d --name gitea --restart unless-stopped \
+          -p 3000:3000 \
+          -e GITEA__security__INSTALL_LOCK=true \
+          -e GITEA__server__ROOT_URL=http://gitea:3000/ \
+          -e GITEA__server__DOMAIN=gitea \
+          gitea/gitea:1.22
+
+        # Wait for Gitea's HTTP API to answer.
+        for i in $(seq 1 60); do
+          if curl -sf http://127.0.0.1:3000/api/healthz >/dev/null 2>&1; then
+            break
+          fi
+          sleep 3
+        done
+
+        # Create the admin/student user inside the container (idempotent-ish).
+        docker exec --user git gitea gitea admin user create \
+          --username student --password student --email student@example.com \
+          --admin --must-change-password=false || true
+
+        # Create a repo and seed it with a simple app via the Gitea API.
+        curl -sf -u student:student -X POST \
+          -H 'Content-Type: application/json' \
+          http://127.0.0.1:3000/api/v1/user/repos \
+          -d '{"name":"sample-app","auto_init":true,"default_branch":"main","private":false}' \
+          >/dev/null || true
+
+        # Write the Deployment manifest to a file using printf (single logical
+        # line with \n escapes) - no nested YAML block that would confuse the
+        # playground manifest's own YAML parser - then seed it via the API.
+        printf 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\n  labels:\n    app: web\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: web\n  template:\n    metadata:\n      labels:\n        app: web\n    spec:\n      containers:\n        - name: web\n          image: nginx:1.27\n          ports:\n            - containerPort: 80\n' > /tmp/web.yaml
+        B64=$(base64 -w0 /tmp/web.yaml 2>/dev/null || base64 /tmp/web.yaml | tr -d '\n')
+        curl -sf -u student:student -X POST \
+          -H 'Content-Type: application/json' \
+          http://127.0.0.1:3000/api/v1/repos/student/sample-app/contents/manifests/web.yaml \
+          -d "{\"content\":\"${B64}\",\"branch\":\"main\",\"message\":\"Add web deployment\"}" \
+          >/dev/null || true
+
+        echo "Gitea seeded: http://gitea:3000/student/sample-app (main, manifests/web.yaml)"
+
+    # --- Workstation kubeconfig (same pattern as the other playgrounds) ---
+    init_kubeconfig_devmachine:
+      init: true
+      machine: dev-machine
+      user: laborant
+      timeout_seconds: 180
+      run: |
+        for i in $(seq 1 45); do
+          if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=3 rancher-server \
+               'sudo test -f /etc/rancher/k3s/k3s.yaml' 2>/dev/null; then
+            break
+          fi
+          sleep 2
+        done
+        mkdir -p "$HOME/.kube"
+        ssh -o StrictHostKeyChecking=no rancher-server 'sudo cat /etc/rancher/k3s/k3s.yaml' \
+          | sed 's/127.0.0.1/172.16.0.2/' > "$HOME/.kube/config"
+        chmod 600 "$HOME/.kube/config"
+        grep -q 'KUBECONFIG=' "$HOME/.bashrc" \
+          || echo 'export KUBECONFIG=$HOME/.kube/config' >> "$HOME/.bashrc"
+        export KUBECONFIG="$HOME/.kube/config"
+        kubectl get nodes
+
+    # --- cert-manager (required by Rancher self-signed mode) ---
+    init_cert_manager:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_kubeconfig_devmachine
+      timeout_seconds: 300
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+        helm install cert-manager jetstack/cert-manager \
+          --namespace cert-manager \
+          --create-namespace \
+          --set crds.enabled=true
+        kubectl -n cert-manager rollout status deployment/cert-manager --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-webhook --timeout=240s
+        kubectl -n cert-manager rollout status deployment/cert-manager-cainjector --timeout=240s
+
+    # --- Rancher (self-signed HTTPS, bundled Fleet) ---
+    init_rancher:
+      init: true
+      machine: dev-machine
+      user: laborant
+      needs:
+        - init_cert_manager
+      timeout_seconds: 600
+      run: |
+        export KUBECONFIG="$HOME/.kube/config"
+        helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+        helm repo update
+        kubectl create namespace cattle-system
+        helm install rancher rancher-stable/rancher \
+          --namespace cattle-system \
+          --set hostname=172.16.0.2.sslip.io \
+          --set bootstrapPassword=admin \
+          --set replicas=1
+        kubectl -n cattle-system rollout status deployment/rancher --timeout=480s
+        kubectl -n cattle-system patch svc rancher \
+          -p '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":80,"nodePort":30080},{"name":"https","port":443,"targetPort":443,"nodePort":30443}]}}'
+        for i in $(seq 1 30); do
+          if kubectl get settings.management.cattle.io server-url >/dev/null 2>&1; then
+            break
+          fi
+          sleep 4
+        done
+        kubectl patch settings.management.cattle.io server-url \
+          --type merge -p '{"value":"https://172.16.0.2.sslip.io:30443"}'
+
+  accessControl:
+    canList:
+      - owner
+    canRead:
+      - owner
+    canStart:
+      - owner

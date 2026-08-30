@@ -1,11 +1,13 @@
 ---
 kind: challenge
 
-title: 'Drive a Deployment with a Fleet CD Pipeline'
+title: 'Ship a Change Through Fleet and a Git Server'
 
 description: |
-  Wire up the continuous delivery half of a CI/CD pipeline: have Fleet watch a deployment repository and roll out a pinned application image, then confirm the running workload matches the version declared in Git.
-  This is the GitOps contract that Rancher Fleet enforces.
+  Run the continuous delivery loop against a self-hosted Gitea Git server: point
+  Fleet at a repository, then commit and push a manifest change and watch Fleet
+  reconcile it onto the cluster. This is the GitOps contract Rancher Fleet
+  enforces - the cluster follows Git, with no manual kubectl apply.
 
 categories:
   - kubernetes
@@ -15,251 +17,196 @@ tagz:
   - Rancher
   - Fleet
   - cicd
-  - GitOps
+  - gitops
   - continuous-delivery
 
-difficulty: hard
+difficulty: medium
 
 createdAt: 2026-08-27
 updatedAt: 2026-08-27
 
+# CI/CD playground: Rancher (with Fleet) + a self-hosted Gitea server on its own
+# machine (see playgrounds/rancher-k3s-gitea/manifest.yaml).
+# TODO(publish): replace with the suffixed name from
+#   `labctl playground create rancher-k3s-gitea --base flexbox`.
 playground:
-  name: ubuntu-k3s-bare
+  name: rancher-k3s-gitea-6cdd37fb
 
 tasks:
-  init_wait_k3s:
+  # Wait for Rancher's bundled Fleet (local cluster registered) and for Gitea to
+  # be serving, so the student starts from a working environment.
+  init_wait_ready:
     init: true
+    machine: dev-machine
+    user: laborant
+    timeout_seconds: 360
     run: |
-      for i in $(seq 1 30); do
-        if kubectl get nodes | grep -q " Ready"; then
+      export KUBECONFIG=$HOME/.kube/config
+      # Fleet ready
+      for i in $(seq 1 75); do
+        kubectl -n fleet-local get clusters.fleet.cattle.io \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null | grep -q . && break
+        sleep 4
+      done
+      # Gitea serving its seeded repo (via the reachable node IP)
+      for i in $(seq 1 45); do
+        if curl -sf http://172.16.0.4:3000/student/sample-app/raw/branch/main/manifests/web.yaml >/dev/null 2>&1; then
           exit 0
         fi
-        sleep 2
+        sleep 4
       done
-      echo "K3s did not become ready in time"
+      echo "Gitea or Fleet not ready in time"
       exit 1
 
-  init_install_fleet:
-    init: true
+  # Gate step 1: a GitRepo in fleet-local points at the self-hosted Gitea server.
+  verify_gitrepo_to_gitea:
+    machine: dev-machine
+    user: laborant
     needs:
-      - init_wait_k3s
+      - init_wait_ready
     run: |
-      if kubectl get crd gitrepos.fleet.cattle.io >/dev/null 2>&1 \
-         && kubectl -n cattle-fleet-system get deployment fleet-controller >/dev/null 2>&1; then
-        exit 0
-      fi
-      helm -n cattle-fleet-system install --create-namespace --wait \
-        fleet-crd oci://reg.rancher.com/rancher/fleet-crd
-      helm -n cattle-fleet-system install --create-namespace --wait \
-        fleet oci://reg.rancher.com/rancher/fleet
-
-      for i in $(seq 1 60); do
-        if kubectl -n fleet-local get clusters.fleet.cattle.io \
-            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null | grep -q .; then
-          exit 0
-        fi
-        sleep 5
-      done
-      echo "Fleet local cluster did not register in time"
-      exit 1
-
-  verify_delivery_source:
-    run: |
-      rm -f /tmp/verify_cd_source_hint.txt
-
-      # A Fleet CD source can be a GitRepo (online) or a Bundle produced by
-      # `fleet apply` (offline / CI). Either is a valid delivery source.
-      GR=$(kubectl -n fleet-local get gitrepo -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-      BUNDLE=$(kubectl -n fleet-local get bundles -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-      if [ -z "${GR}" ] && [ -z "${BUNDLE}" ]; then
-        echo "No Fleet delivery source found - create a GitRepo or apply a Bundle with 'fleet apply'" | tee /tmp/verify_cd_source_hint.txt
+      rm -f /tmp/verify_gr_hint.txt
+      export KUBECONFIG=$HOME/.kube/config
+      MATCH=$(kubectl -n fleet-local get gitrepo \
+        -o jsonpath='{range .items[*]}{.spec.repo}{"\n"}{end}' 2>/dev/null \
+        | grep -c '172.16.0.4:3000')
+      if [ "${MATCH:-0}" -lt 1 ]; then
+        echo "No GitRepo in fleet-local pointing at the Gitea server (use http://172.16.0.4:3000/student/sample-app, the IP not the hostname)." \
+          | tee /tmp/verify_gr_hint.txt
         exit 1
       fi
-
-      echo "Fleet delivery source present (gitrepo='${GR}' bundle='${BUNDLE}')"
+      echo "GitRepo targets the self-hosted Gitea server"
     hintcheck: |
-      if [ -f /tmp/verify_cd_source_hint.txt ]; then
-        cat /tmp/verify_cd_source_hint.txt
-        rm -f /tmp/verify_cd_source_hint.txt
+      if [ -f /tmp/verify_gr_hint.txt ]; then
+        cat /tmp/verify_gr_hint.txt
+        rm -f /tmp/verify_gr_hint.txt
       fi
 
-  verify_app_running:
+  # Gate step 2: Fleet deployed the app from Gitea (bundle Ready + web running).
+  verify_app_deployed:
+    machine: dev-machine
+    user: laborant
     needs:
-      - verify_delivery_source
+      - verify_gitrepo_to_gitea
+    timeout_seconds: 240
     run: |
-      rm -f /tmp/verify_cd_app_hint.txt
-
-      # The pipeline must produce a running deployment named 'cd-app' in the
-      # 'cd-demo' namespace (the contract the student deploys to via Fleet).
-      for i in $(seq 1 30); do
-        READY=$(kubectl -n cd-demo get deployment cd-app -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+      rm -f /tmp/verify_app_hint.txt
+      export KUBECONFIG=$HOME/.kube/config
+      for i in $(seq 1 40); do
+        READY=$(kubectl get deploy web -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
         if [ "${READY:-0}" -ge 1 ]; then
-          echo "Deployment cd-app is running"
+          echo "Fleet deployed web from Gitea"
           exit 0
         fi
         sleep 5
       done
-      echo "Deployment 'cd-app' in namespace 'cd-demo' is not running yet" | tee /tmp/verify_cd_app_hint.txt
+      echo "The web Deployment is not running yet. Check the GitRepo branch (main) and path (manifests)." \
+        | tee /tmp/verify_app_hint.txt
       exit 1
     hintcheck: |
-      if [ -f /tmp/verify_cd_app_hint.txt ]; then
-        cat /tmp/verify_cd_app_hint.txt
-        rm -f /tmp/verify_cd_app_hint.txt
+      if [ -f /tmp/verify_app_hint.txt ]; then
+        cat /tmp/verify_app_hint.txt
+        rm -f /tmp/verify_app_hint.txt
       fi
 
-  verify_image_pinned:
+  # Gate step 3: a committed change was reconciled. The seed ships replicas: 1;
+  # the student commits a scale-up, and Fleet must reconcile it to > 1.
+  verify_committed_change_reconciled:
+    machine: dev-machine
+    user: laborant
     needs:
-      - verify_app_running
+      - verify_app_deployed
+    timeout_seconds: 240
     run: |
-      rm -f /tmp/verify_cd_image_hint.txt
-
-      # GitOps contract: the running image tag must be an explicit, pinned
-      # version - never 'latest'. This mirrors CI writing a specific tag to Git.
-      IMAGE=$(kubectl -n cd-demo get deployment cd-app \
-        -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
-      if [ -z "${IMAGE}" ]; then
-        echo "Could not read the cd-app image" | tee /tmp/verify_cd_image_hint.txt
-        exit 1
-      fi
-
-      TAG=$(echo "${IMAGE}" | awk -F: '{print $NF}')
-      case "${IMAGE}" in
-        *:*) : ;;
-        *)
-          echo "Image '${IMAGE}' has no explicit tag - pin a specific version" | tee /tmp/verify_cd_image_hint.txt
-          exit 1
-          ;;
-      esac
-      if [ "${TAG}" = "latest" ]; then
-        echo "Image is pinned to 'latest' - CD must deploy an explicit version tag" | tee /tmp/verify_cd_image_hint.txt
-        exit 1
-      fi
-
-      echo "cd-app runs pinned image ${IMAGE}"
-    hintcheck: |
-      if [ -f /tmp/verify_cd_image_hint.txt ]; then
-        cat /tmp/verify_cd_image_hint.txt
-        rm -f /tmp/verify_cd_image_hint.txt
-      fi
-
-  verify_managed_by_fleet:
-    needs:
-      - verify_image_pinned
-    run: |
-      rm -f /tmp/verify_cd_managed_hint.txt
-
-      # The deployment must be owned by Fleet, proving it came through the CD
-      # pipeline rather than a manual kubectl apply.
-      LABELS=$(kubectl -n cd-demo get deployment cd-app -o jsonpath='{.metadata.labels}' 2>/dev/null)
-      ANNOS=$(kubectl -n cd-demo get deployment cd-app -o jsonpath='{.metadata.annotations}' 2>/dev/null)
-      if echo "${LABELS}${ANNOS}" | grep -qi "fleet.cattle.io\|objectset.rio.cattle.io"; then
-        echo "cd-app is managed by Fleet"
-        exit 0
-      fi
-
-      echo "cd-app does not appear to be managed by Fleet - deploy it through a GitRepo, not a manual apply" | tee /tmp/verify_cd_managed_hint.txt
+      rm -f /tmp/verify_change_hint.txt
+      export KUBECONFIG=$HOME/.kube/config
+      for i in $(seq 1 30); do
+        R=$(kubectl get deploy web -o jsonpath='{.spec.replicas}' 2>/dev/null)
+        if [ -n "${R}" ] && [ "${R}" -gt 1 ]; then
+          echo "Fleet reconciled a committed change: web now has ${R} replicas"
+          exit 0
+        fi
+        sleep 6
+      done
+      echo "web is still at 1 replica. Clone the Gitea repo, change replicas in manifests/web.yaml, commit, and push - Fleet will reconcile it." \
+        | tee /tmp/verify_change_hint.txt
       exit 1
     hintcheck: |
-      if [ -f /tmp/verify_cd_managed_hint.txt ]; then
-        cat /tmp/verify_cd_managed_hint.txt
-        rm -f /tmp/verify_cd_managed_hint.txt
+      if [ -f /tmp/verify_change_hint.txt ]; then
+        cat /tmp/verify_change_hint.txt
+        rm -f /tmp/verify_change_hint.txt
       fi
 ---
 
-A CI/CD pipeline for Kubernetes splits cleanly in two. The CI half builds and tests code, produces a container image, and writes a specific image tag into a deployment repository. The CD half watches that repository and rolls the change out to clusters. Rancher Fleet owns the CD half, and its contract is strict: what runs on the cluster is exactly what Git declares.
+Continuous delivery with Fleet is a contract: the cluster runs exactly what Git declares, and a commit is what triggers a rollout. In this challenge you run that loop end to end against a Git server you control.
 
-This challenge focuses on that CD contract. Fleet is installed and the local cluster is registered. You will stand up the delivery side of a pipeline so that a `cd-app` deployment runs a specific, pinned image and is owned by Fleet - the observable result of a real pipeline.
+The playground has a self-hosted **Gitea** server on its own machine (open the :tab{text='Gitea' name='Gitea'} tab, user `student`, password `student`). It hosts a `student/sample-app` repository with `manifests/web.yaml`, an nginx Deployment set to one replica. You work from the :tab{text='dev-machine' machine='dev-machine'} workstation.
 
-The application must end up as a Deployment named `cd-app` in a `cd-demo` namespace, running an explicitly tagged image (not `latest`), delivered through Fleet.
+## Step 1: Point Fleet at the Gitea Repository
 
-## Step 1: Provide a Delivery Source
-
-Give Fleet a delivery source for the application. That can be an online `GitRepo`, or - the offline path a CI runner uses - a `Bundle` produced by `fleet apply` from local manifests. Either works.
+Create a `GitRepo` in the `fleet-local` namespace that points at the Gitea repo. Use the server's IP address `172.16.0.4:3000`, not its hostname - Fleet clones from a cluster pod, and cluster DNS does not resolve the `gitea` machine name.
 
 ::simple-task
 ---
 :tasks: tasks
-:name: verify_delivery_source
+:name: verify_gitrepo_to_gitea
 ---
 #active
-Waiting for a Fleet delivery source...
+Waiting for a GitRepo pointing at the Gitea server...
 
 #completed
-A Fleet delivery source exists.
+Fleet is watching your Gitea repository.
 ::
 
 ::hint-box
 ---
-:summary: Hint 1
+:summary: Hint 1 - the GitRepo
 ---
-When you cannot push to a Git host, the `fleet apply` CLI turns a directory of manifests into a Bundle and applies it directly - the same object a GitRepo would generate. Point it at a directory whose manifests deploy a `cd-app` Deployment into a `cd-demo` namespace.
+A GitRepo needs `repo`, `branch`, and `paths`. The repo is `http://172.16.0.4:3000/student/sample-app`, the branch is `main`, and the path is `manifests`. Create it in `fleet-local` so it targets the local cluster.
 ::
 
-## Step 2: Roll Out the Application
+## Step 2: Let Fleet Deploy the App
 
-Fleet should deliver the manifests so that `cd-app` runs in `cd-demo`.
+Fleet clones the repo, builds a bundle, and applies it. The `web` Deployment should appear.
 
 ::simple-task
 ---
 :tasks: tasks
-:name: verify_app_running
+:name: verify_app_deployed
 ---
 #active
-Waiting for cd-app to be running in cd-demo...
+Waiting for Fleet to deploy the app from Gitea...
 
 #completed
-cd-app is running.
+Fleet deployed the app from your Git server.
 ::
 
 ::hint-box
 ---
-:summary: Hint 2
+:summary: Hint 2 - nothing deployed
 ---
-If the app never appears, the GitRepo path or branch is likely wrong, or the manifests deploy to a different name/namespace. Describe the GitRepo and its bundle to see what Fleet applied.
+Check `kubectl -n fleet-local get gitrepo` and `get bundles`. If the GitRepo shows no commit, the repo URL is likely wrong (must be the IP, not `gitea`). If the bundle stays NotReady, check the branch (`main`) and path (`manifests`).
 ::
 
-## Step 3: Pin the Image Version
+## Step 3: Commit a Change and Watch It Reconcile
 
-The running image must carry an explicit version tag. Deploying `latest` breaks the GitOps guarantee that Git describes exactly what runs.
+Now the real loop. Clone the Gitea repository, change the replica count in `manifests/web.yaml`, commit, and push. Do not run `kubectl scale` - the change must come through Git. Fleet will reconcile it.
 
 ::simple-task
 ---
 :tasks: tasks
-:name: verify_image_pinned
+:name: verify_committed_change_reconciled
 ---
 #active
-Checking that cd-app runs a pinned image tag...
+Waiting for Fleet to reconcile your committed change...
 
 #completed
-cd-app runs a pinned image version.
+Fleet reconciled your commit. The continuous delivery loop works end to end.
 ::
 
 ::hint-box
 ---
-:summary: Hint 3
+:summary: Hint 3 - push the change, do not scale by hand
 ---
-In a real pipeline, CI writes a specific tag (a version or a commit SHA) into the manifest before Fleet deploys it. Make sure the image in your manifest ends with an explicit tag other than `latest`.
-::
-
-## Step 4: Prove Fleet Owns It
-
-The deployment must be delivered by Fleet, not applied by hand. Fleet labels the resources it manages.
-
-::simple-task
----
-:tasks: tasks
-:name: verify_managed_by_fleet
----
-#active
-Confirming cd-app is managed by Fleet...
-
-#completed
-cd-app is delivered and owned by Fleet. Well done.
-::
-
-::hint-box
----
-:summary: Hint 4
----
-A manual `kubectl apply` will satisfy the "running" check but fail this one - the resource carries no Fleet ownership metadata. The workload has to arrive through the GitRepo bundle for Fleet to own it.
+Clone with `git clone http://student:student@172.16.0.4:3000/student/sample-app.git`, edit `manifests/web.yaml` to set `replicas` above 1, commit, and `git push origin main`. Fleet polls Gitea (about every 15 seconds) and reconciles the change. A `kubectl scale` would satisfy nothing here - the point is that the commit drives the rollout.
 ::
