@@ -138,6 +138,23 @@ spec:
 EOF
 ```
 
+::hint-box
+---
+:summary: How to watch the backup after you apply it
+---
+The backup runs asynchronously, so it will not be ready the instant you apply the object. Poll its status in a loop until the `Ready` condition turns `True` and a `filename` appears:
+
+```bash
+for i in $(seq 1 24); do
+  kubectl get backup rancher-state-backup \
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status} {.status.filename}{"\n"}'
+  sleep 5
+done
+```
+
+You can also watch the whole object update live with `kubectl get backup rancher-state-backup -w`, or read the full status with `kubectl get backup rancher-state-backup -o yaml`. It usually completes within a minute.
+::
+
 The operator gathers the selected resources, packages them into a `tar.gz` archive, and writes it to the persistent volume. It records progress on the `Backup` object itself. Watch it complete:
 
 ```bash
