@@ -382,11 +382,20 @@ Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose *
 _A new dashboard offers an Auto grid or Custom grid layout - Auto grid is fine here._
 ::
 
-Now add a panel: click the **+ Add new element** button, choose **Panel**, and open its editor to **Configure** it. The data source should already be **Prometheus** (the stack wired it in as the default). In the query row, click **{} Edit as code** to type raw PromQL, then enter:
+Now add a panel: click the **+ Add new element** button, choose **Panel**, then **Configure** it to open the panel editor. The data source should already be **Prometheus** (the stack wired it in as the default). In the **Query** section below the graph, switch the query mode from **Builder** to **Code** - notice how the UI changes to a free-text field reading _Enter a PromQL query_. Type:
 
 ```
 kube_pod_container_status_restarts_total{namespace="demo"}
 ```
+
+::image-box
+---
+:src: __static__/grafana-query-builder-code-v1.png
+:alt: The Grafana panel editor Query section showing the Builder and Code toggle, with Code selected so a free-text Enter a PromQL query field is visible for typing the metric expression
+:max-width: 900px
+---
+_Switch the Query section from Builder to Code to type raw PromQL in the "Enter a PromQL query" field._
+::
 
 ::hint-box
 ---
