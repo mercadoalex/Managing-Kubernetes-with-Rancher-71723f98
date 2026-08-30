@@ -3,3 +3,5 @@
 
 # Internal authoring notes (not for publication)
 .kiro/
+# Semantic review artifacts (local only)
+semantic-review/
