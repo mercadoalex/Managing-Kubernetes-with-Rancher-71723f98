@@ -87,7 +87,7 @@ tasks:
           kindsRegexp: "^secrets$"
           namespaceRegexp: "^cattle-system$"
       EOF
-      kubectl -n cattle-resources-system rollout status deploy/rancher-backup --timeout=300s >/dev/null 2>&1
+      kubectl -n cattle-resources-system rollout status deploy/rancher-backup --timeout=300s >/dev/null 2>&1 || true
       AVAIL=$(kubectl -n cattle-resources-system get deploy rancher-backup \
         -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
       if [ "${AVAIL:-0}" -lt 1 ] 2>/dev/null; then

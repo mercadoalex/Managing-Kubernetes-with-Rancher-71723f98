@@ -442,7 +442,7 @@ Your custom dashboard is saved. You built a panel from a raw metric - the everyd
 ---
 :summary: Where the pieces are in the Grafana UI
 ---
-The **New dashboard** button is under **Dashboards** in the left navigation (the four-squares icon). After **Add visualization** and choosing the **Prometheus** data source, the query editor defaults to a builder mode - click **Code** (top right of the query box) to type raw PromQL. Paste `kube_pod_container_status_restarts_total{namespace="demo"}`, then use the **Save** (disk) icon at the top right. The panel does not need a specific title, but the query must use that metric so the dashboard is recognizably yours.
+The **New dashboard** button is under **Dashboards** in the left navigation (the four-squares icon). Add a panel with **+ Add new element > Panel**, then click the blue **Configure** button in the middle of the panel. With the **Prometheus** data source selected, the **Query** section defaults to **Builder** mode - switch it to **Code** to type raw PromQL. Paste `kube_pod_container_status_restarts_total{namespace="demo"}`, then use the **Save** (disk) icon at the top right. The panel does not need a specific title, but the query must use that metric so the dashboard is recognizably yours.
 ::
 
 ## You're Done
