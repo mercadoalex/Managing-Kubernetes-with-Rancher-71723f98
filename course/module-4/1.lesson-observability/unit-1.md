@@ -222,6 +222,8 @@ EOF
 
 The metric `kube_pod_container_status_restarts_total` is a **counter** - it only ever grows. Once the crasher has restarted more than three times, the expression stays true, so the alert reliably completes its `for: 1m` window and fires - and keeps firing. A tempting alternative like `increase(...[2m]) > 2` looks at a sliding window, which can dip just under the threshold between scrapes and reset the alert's timer, so it flickers and may never fire. For a lab where you want to *see* the alert trip, a monotonic counter threshold is the dependable choice.
 
+::
+
 ::image-box
 ---
 :src: __static__/crashloop-counter-v1.png
@@ -304,6 +306,8 @@ If you look at the Alerts page, you will notice the stack's own `KubePodCrashLoo
 
 The Prometheus operator does not adopt every `PrometheusRule` in the cluster - it only picks up the ones whose labels match the `ruleSelector` configured on the `Prometheus` object. The `kube-prometheus-stack` chart sets that selector to match its Helm release label, so a rule needs `release: monitoring` (matching the release name you installed) to be loaded. Leave it off and your rule is a valid object that Prometheus simply ignores - a common and confusing first mistake. You can confirm a rule was adopted in the Prometheus UI under Status > Rules.
 
+::
+
 ::image-box
 ---
 :src: __static__/prometheusrule-adoption-v1.png
@@ -311,8 +315,6 @@ The Prometheus operator does not adopt every `PrometheusRule` in the cluster - i
 :max-width: 800px
 ---
 _The operator only loads PrometheusRules whose labels match its selector; a rule missing the release label is silently ignored._
-::
-
 ::
 
 ## You're Done
