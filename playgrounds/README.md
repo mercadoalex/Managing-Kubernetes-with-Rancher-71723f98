@@ -21,6 +21,8 @@ Base: `k3s` (multi-node, ships Helm + Traefik + ServiceLB). Two init tasks insta
 
 Manifest: `rancher-k3s/manifest.yaml`.
 
+Tabs: a **Rancher** tab (NodePort 30080) and a **Grafana** tab (NodePort 30300). The Grafana tab exists for the Module 4 observability lesson, which installs `kube-prometheus-stack` and exposes Grafana as a NodePort on 30300 (`--set grafana.service.type=NodePort --set grafana.service.nodePort=30300`). In lessons that do not install monitoring, the Grafana tab shows a placeholder until something is running on 30300 - harmless, and a reload picks Grafana up once the observability lesson installs it.
+
 ### Build / register with labctl
 
 A custom playground is always overrides on top of a base, registered via `labctl`. The platform appends a unique suffix to the name - use that suffixed name everywhere afterward (including each post-install lesson's `playground.name`).

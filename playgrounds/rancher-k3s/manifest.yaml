@@ -102,6 +102,18 @@ playground:
       machine: cplane-01
       number: 30080
       target: window
+    # Grafana tab for the Module 4 observability lesson. The lesson installs
+    # kube-prometheus-stack and exposes Grafana as a NodePort on 30300, which
+    # this tab opens in the browser (validated: Grafana redirects / -> /login ->
+    # 200 over 172.16.0.2:30300, no proxy sub-path issue). Until that lesson
+    # installs Grafana the tab shows a placeholder - harmless in the earlier
+    # lessons that share this playground; a reload picks Grafana up once it is
+    # running.
+    - kind: http-port
+      name: Grafana
+      machine: cplane-01
+      number: 30300
+      target: window
 
   initTasks:
     # Production-faithful model: the student works from the dev-machine

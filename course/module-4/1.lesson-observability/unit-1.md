@@ -34,7 +34,7 @@ So here we install `kube-prometheus-stack` directly with trimmed resource reques
 
 ## Step 1: Install the Monitoring Stack
 
-Add the `prometheus-community` Helm repository and install `kube-prometheus-stack` into a `monitoring` namespace. The `--set` flags trim the footprint so it fits this lab node - short metric retention and no persistent volumes.
+Add the `prometheus-community` Helm repository and install `kube-prometheus-stack` into a `monitoring` namespace. The `--set` flags trim the footprint so it fits this lab node - short metric retention and no persistent volumes - and expose Grafana on a NodePort (30300) so you can open it in the browser through the **Grafana** tab.
 
 From the :tab{text='dev-machine' machine='dev-machine'} terminal:
 
@@ -45,6 +45,8 @@ helm repo update
 helm install monitoring prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --create-namespace \
+  --set grafana.service.type=NodePort \
+  --set grafana.service.nodePort=30300 \
   --set prometheus.prometheusSpec.retention=2h \
   --set prometheus.prometheusSpec.resources.requests.cpu=100m \
   --set prometheus.prometheusSpec.resources.requests.memory=256Mi \
@@ -105,22 +107,29 @@ Waiting for a running Grafana pod...
 Grafana is running.
 ::
 
-## Step 3: Look at the Dashboards
+## Step 3: Open Grafana in the Browser
 
-Grafana ships with a set of pre-built Kubernetes dashboards. Reach it by port-forwarding from the workstation:
+Because you installed Grafana with `grafana.service.type=NodePort` on port 30300, this playground's **Grafana** tab points straight at it. Open the :tab{text='Grafana' name='Grafana'} tab - Grafana loads in a new browser tab and shows its login page.
 
-```bash
-kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
-```
-
-Then open Grafana at the forwarded address. The default admin user is `admin`, and the password is stored in a secret:
+Log in with the username `admin`. The password is generated at install and stored in a secret; print it from the :tab{text='dev-machine' machine='dev-machine'} terminal:
 
 ```bash
 kubectl -n monitoring get secret monitoring-grafana \
   -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-Browse **Dashboards** and open one of the "Kubernetes / Compute Resources" views to see live cluster metrics. Because this cluster already runs Rancher, the graphs are full of real activity from the moment you open them. This is the same Grafana that Rancher Monitoring surfaces inside the Rancher UI.
+Copy that value into the Grafana login.
+
+::remark-box
+---
+kind: info
+---
+
+If the **Grafana** tab shows an error the first time, Grafana is not up yet - give the `monitoring-grafana` pod a moment to become ready (Step 2), then reload the tab.
+
+::
+
+Once you are in, browse **Dashboards** and open one of the "Kubernetes / Compute Resources" views to see live cluster metrics. Because this cluster already runs Rancher, the graphs are full of real activity from the moment you open them. This is the same Grafana that Rancher Monitoring surfaces inside the Rancher UI.
 
 ## Step 4: Break Something, Then Alert on It
 

@@ -13,6 +13,8 @@ helm repo update
 helm install monitoring prometheus-community/kube-prometheus-stack \
   --namespace monitoring \
   --create-namespace \
+  --set grafana.service.type=NodePort \
+  --set grafana.service.nodePort=30300 \
   --set prometheus.prometheusSpec.retention=2h \
   --set prometheus.prometheusSpec.resources.requests.cpu=100m \
   --set prometheus.prometheusSpec.resources.requests.memory=256Mi \
