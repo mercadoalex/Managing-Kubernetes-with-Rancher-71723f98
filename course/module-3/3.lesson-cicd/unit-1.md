@@ -56,6 +56,21 @@ Open the :tab{text='Gitea' name='Gitea'} tab and log in with username `student` 
 
 ## Step 2: Point Fleet at the Gitea Repository
 
+::remark-box
+---
+kind: warning
+---
+
+**Give Fleet a couple of minutes first.** Rancher installs Fleet as a follow-on step, so after the playground finishes loading Fleet still needs two to three minutes to register its custom resources and settle. If you create a GitRepo too early you will see an error like `no matches for kind "GitRepo"` - that just means Fleet is not ready yet, not that anything is broken. Confirm it is ready before you continue:
+
+```bash
+kubectl -n fleet-local get clusters.fleet.cattle.io
+```
+
+Wait until the `local` cluster shows a `BUNDLES-READY` count (for example `1/1`) and a recent `LAST-SEEN`. Then proceed.
+
+::
+
 From the :tab{text='dev-machine' machine='dev-machine'} terminal, create a `GitRepo` in the `fleet-local` namespace that points at the Gitea repo. Use the server's **IP address**, not its hostname:
 
 ```yaml
