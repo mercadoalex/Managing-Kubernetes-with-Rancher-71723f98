@@ -371,7 +371,18 @@ kubectl -n monitoring get secret monitoring-grafana \
 Copy that value into the Grafana login. If the **Grafana** tab is blank or shows a connection error, Grafana's proxy just needs a moment - reload the tab a couple of times.
 ::
 
-Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose **Dashboards > New > New dashboard**, then **Add visualization**. When prompted for a data source, pick **Prometheus** (the stack wired it in as the default). In the query editor, switch to the code editor and enter this PromQL:
+Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose **Dashboards > New > New dashboard**. Grafana asks how to lay out the dashboard - choose **Auto grid** (the simpler default; with a single panel the choice does not matter).
+
+::image-box
+---
+:src: __static__/grafana-new-dashboard-grid-v1.png
+:alt: The new Grafana dashboard screen offering two layout options, Auto grid and Custom grid, before any panels are added
+:max-width: 700px
+---
+_A new dashboard offers an Auto grid or Custom grid layout - Auto grid is fine here._
+::
+
+Now add a panel: click the **+ Add new element** button and choose **Panel**, then use the **+** on the panel to open its editor. When prompted for a data source, pick **Prometheus** (the stack wired it in as the default). In the query editor, switch from **Builder** to **Code** and enter this PromQL:
 
 ```
 kube_pod_container_status_restarts_total{namespace="demo"}
