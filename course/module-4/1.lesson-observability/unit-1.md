@@ -228,13 +228,25 @@ The metric `kube_pod_container_status_restarts_total` is a **counter** - it only
 
 An alert does not fire the instant you create it. It moves through states: **inactive** (condition false), **pending** (condition true, waiting out the `for:` window), then **firing**. With a crash-looping pod the whole trip takes a few minutes - crash-loop backoff slows the restarts, then Prometheus scrapes, then the one-minute `for:` elapses.
 
-Watch it happen from the Prometheus UI. Port-forward Prometheus:
+Watch the state change from the :tab{text='dev-machine' machine='dev-machine'} terminal. This loop briefly forwards the Prometheus port to the workstation and queries the alert's state every 15 seconds:
 
 ```bash
-kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090
+while true; do
+  kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9099:9090 >/dev/null 2>&1 &
+  PF=$!; sleep 3
+  STATE=$(curl -sf -G 'http://127.0.0.1:9099/api/v1/query' \
+    --data-urlencode 'query=ALERTS{alertname="PodCrashLooping"}' \
+    | grep -o '"alertstate":"[a-z]*"' | head -1)
+  kill $PF 2>/dev/null
+  echo "$(date +%T) PodCrashLooping: ${STATE:-inactive}"
+  echo "$STATE" | grep -q firing && break
+  sleep 12
+done
 ```
 
-Open it and go to **Status > Rule Health** or the **Alerts** page. You will see `PodCrashLooping` sitting in **Pending**, then flip to **Firing**. Alertmanager (which the stack also installed) is what would route that firing alert to email, Slack, or PagerDuty in a real setup.
+You will see it print `pending` for a minute or so, then flip to `firing`. Press `Ctrl+C` to stop the loop once it fires.
+
+You can also see it visually in Grafana. Open the :tab{text='Grafana' name='Grafana'} tab, go to **Alerting > Alert rules**, and find `PodCrashLooping` - it shows the same Pending, then Firing transition. Alertmanager (which the stack also installed) is what would route that firing alert to email, Slack, or PagerDuty in a real setup.
 
 ::simple-task
 ---
