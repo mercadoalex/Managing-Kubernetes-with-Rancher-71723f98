@@ -8,6 +8,14 @@ name: fleet-concepts-and-gitrepos
 
 In the last lesson you brought a second cluster under Rancher. This lesson introduces the other half of managing clusters at scale: keeping what runs on them in sync with Git. Rancher's built-in GitOps engine, **Fleet**, watches a Git repository and applies whatever it finds there to your clusters, then keeps them matching the repository over time.
 
+::image-box
+---
+:src: __static__/fleet-logo-horizontal-v1.png
+:alt: The Rancher Fleet logo
+:max-width: 360px
+---
+::
+
 Fleet ships with Rancher, so there is nothing to install. It already runs on the upstream cluster, and you drive it the same way you drive everything else: with `kubectl` from the :tab{text='dev-machine' machine='dev-machine'} workstation, and through the :tab{text='Rancher' name='Rancher'} tab in the UI.
 
 ::image-box
