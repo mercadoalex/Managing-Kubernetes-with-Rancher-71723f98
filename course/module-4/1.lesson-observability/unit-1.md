@@ -120,9 +120,7 @@ kubectl -n monitoring get secret monitoring-grafana \
   -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-Browse **Dashboards** and open one of the "Kubernetes / Compute Resources" views to see live cluster metrics. This is the same Grafana that Rancher Monitoring surfaces inside the Rancher UI.
-
-<!-- [image placeholder] rancher-grafana-dashboard.png - a Grafana Kubernetes compute-resources dashboard showing live metrics -->
+Browse **Dashboards** and open one of the "Kubernetes / Compute Resources" views to see live cluster metrics. Because this cluster already runs Rancher, the graphs are full of real activity from the moment you open them. This is the same Grafana that Rancher Monitoring surfaces inside the Rancher UI.
 
 ## Step 4: Break Something, Then Alert on It
 
