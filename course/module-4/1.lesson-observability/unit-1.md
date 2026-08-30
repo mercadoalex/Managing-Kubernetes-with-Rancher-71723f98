@@ -353,9 +353,40 @@ The Prometheus operator does not adopt every `PrometheusRule` in the cluster - i
 _The operator only loads PrometheusRules whose labels match its selector; a rule missing the release label is silently ignored._
 ::
 
+## Step 6: Build Your Own Dashboard
+
+Browsing the built-in dashboards is one thing; building your own is where Grafana earns its place. Now that the crasher pod has been restarting for a few minutes, its restart count is a perfect live metric to graph. You will create a small dashboard with a single panel that tracks it.
+
+Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose **Dashboards > New > New dashboard**, then **Add visualization**. When prompted for a data source, pick **Prometheus** (the stack wired it in as the default). In the query editor, switch to the code editor and enter this PromQL:
+
+```
+kube_pod_container_status_restarts_total{namespace="demo"}
+```
+
+Give the panel a title like "Crasher restarts", then **Save** the dashboard with any name you like (for example, "My Cluster Health"). The panel immediately shows the crasher's climbing restart count - the same metric your alert rule watches, now visualized.
+
+::simple-task
+---
+:tasks: tasks
+:name: verify_custom_dashboard
+---
+#active
+Waiting for a dashboard with a panel querying the restart-count metric...
+
+#completed
+Your custom dashboard is saved. You built a panel from a raw metric - the everyday Grafana skill.
+::
+
+::hint-box
+---
+:summary: Where the pieces are in the Grafana UI
+---
+The **New dashboard** button is under **Dashboards** in the left navigation (the four-squares icon). After **Add visualization** and choosing the **Prometheus** data source, the query editor defaults to a builder mode - click **Code** (top right of the query box) to type raw PromQL. Paste `kube_pod_container_status_restarts_total{namespace="demo"}`, then use the **Save** (disk) icon at the top right. The panel does not need a specific title, but the query must use that metric so the dashboard is recognizably yours.
+::
+
 ## You're Done
 
-You installed the Prometheus and Grafana stack that underpins Rancher Monitoring, browsed the built-in dashboards, caused a real failure, and watched your own alert catch it and fire. That is the core observability loop: collect metrics, visualize them, and alert on the conditions that matter. On a production cluster you would enable Rancher's Monitoring app for the same stack with UI integration, but the objects you worked with here - Prometheus, Grafana, and PrometheusRule - are identical.
+You installed the Prometheus and Grafana stack that underpins Rancher Monitoring, browsed the built-in dashboards, caused a real failure, watched your own alert catch it and fire, and built a dashboard panel from a raw metric. That is the core observability loop: collect metrics, visualize them, and alert on the conditions that matter. On a production cluster you would enable Rancher's Monitoring app for the same stack with UI integration, but the objects you worked with here - Prometheus, Grafana, and PrometheusRule - are identical.
 
 This lesson covered the metrics pillar of observability. Logs and traces are the other two; Rancher packages a Logging app (Grafana Loki) for the logs pillar, which a later lesson explores.
 

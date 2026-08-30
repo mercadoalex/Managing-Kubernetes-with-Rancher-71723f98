@@ -112,4 +112,48 @@ tasks:
       done
       echo "No alert is firing yet. Make sure your crash-looping pod is restarting and your rule's condition is met."
       exit 1
+
+  # Finally, the student builds their own Grafana dashboard with a panel that
+  # queries the crasher's restart-count metric. We reach Grafana's HTTP API from
+  # the workstation, list every dashboard, and look for one whose panel queries
+  # kube_pod_container_status_restarts_total. None of the stack's built-in
+  # dashboards use that bare metric, so a match means the student built it.
+  verify_custom_dashboard:
+    machine: dev-machine
+    user: laborant
+    needs:
+      - verify_grafana_running
+    timeout_seconds: 120
+    run: |
+      export KUBECONFIG=$HOME/.kube/config
+      GPASS=$(kubectl -n monitoring get secret monitoring-grafana \
+        -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null || true)
+      if [ -z "${GPASS}" ]; then
+        echo "Could not read the Grafana admin password yet"
+        exit 1
+      fi
+      for i in $(seq 1 12); do
+        pkill -f "port-forward.*33300:80" 2>/dev/null || true
+        kubectl -n monitoring port-forward svc/monitoring-grafana 33300:80 >/tmp/pf_grafana.log 2>&1 &
+        PF=$!
+        sleep 8
+        FOUND=""
+        UIDS=$(curl -sf -u "admin:${GPASS}" 'http://127.0.0.1:33300/api/search?type=dash-db' 2>/dev/null \
+          | grep -o '"uid":"[^"]*"' | cut -d'"' -f4 || true)
+        for du in ${UIDS}; do
+          BODY=$(curl -sf -u "admin:${GPASS}" "http://127.0.0.1:33300/api/dashboards/uid/${du}" 2>/dev/null || true)
+          if echo "${BODY}" | grep -q 'kube_pod_container_status_restarts_total'; then
+            FOUND="${du}"
+            break
+          fi
+        done
+        kill $PF 2>/dev/null || true
+        if [ -n "${FOUND}" ]; then
+          echo "Found a custom dashboard querying the restart-count metric (uid ${FOUND})"
+          exit 0
+        fi
+        sleep 6
+      done
+      echo "No custom dashboard queries kube_pod_container_status_restarts_total yet. Build a dashboard with a panel using that metric and save it."
+      exit 1
 ---
