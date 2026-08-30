@@ -363,7 +363,23 @@ Open the :tab{text='Grafana' name='Grafana'} tab and, in the left menu, choose *
 kube_pod_container_status_restarts_total{namespace="demo"}
 ```
 
+::hint-box
+---
+:summary: Reading that query - a first taste of PromQL
+---
+That line is **PromQL**, Prometheus's query language. It has two parts: the metric name `kube_pod_container_status_restarts_total` (the series you want), and a label filter in braces `{namespace="demo"}` (narrowing it to the demo namespace). PromQL goes far beyond this - rates, aggregations, and math across series - but selecting a metric and filtering by label, as here, is the everyday case you will reach for most. The official [Querying basics](https://prometheus.io/docs/prometheus/latest/querying/basics/) guide is the place to go deeper. _(External link; content was rephrased for compliance with licensing restrictions.)_
+::
+
 Give the panel a title like "Crasher restarts", then **Save** the dashboard with any name you like (for example, "My Cluster Health"). The panel immediately shows the crasher's climbing restart count - the same metric your alert rule watches, now visualized.
+
+::image-box
+---
+:src: __static__/grafana-custom-panel-v1.png
+:alt: A custom Grafana dashboard with a single time-series panel titled Crasher restarts, showing the crasher pod's restart count climbing over time, built from the PromQL query kube_pod_container_status_restarts_total for the demo namespace
+:max-width: 900px
+---
+_A custom panel graphing the crasher's restart count - built from a single PromQL query._
+::
 
 ::simple-task
 ---
