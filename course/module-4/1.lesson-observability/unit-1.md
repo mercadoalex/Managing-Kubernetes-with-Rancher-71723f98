@@ -222,11 +222,27 @@ EOF
 
 The metric `kube_pod_container_status_restarts_total` is a **counter** - it only ever grows. Once the crasher has restarted more than three times, the expression stays true, so the alert reliably completes its `for: 1m` window and fires - and keeps firing. A tempting alternative like `increase(...[2m]) > 2` looks at a sliding window, which can dip just under the threshold between scrapes and reset the alert's timer, so it flickers and may never fire. For a lab where you want to *see* the alert trip, a monotonic counter threshold is the dependable choice.
 
+::image-box
+---
+:src: __static__/crashloop-counter-v1.png
+:alt: Two line graphs compared over time. The left graph shows the restart counter as a monotonically rising staircase that crosses a threshold of three and stays above it, so the alert condition remains true. The right graph shows a sliding-window increase metric as a jagged line that dips below the threshold between scrapes, resetting the alert timer and causing flicker
+:max-width: 800px
+---
+_A monotonic counter stays above the threshold once crossed (left), while a sliding-window increase can dip and reset the alert timer (right)._
 ::
 
 ## Step 5: Watch the Alert Fire
 
 An alert does not fire the instant you create it. It moves through states: **inactive** (condition false), **pending** (condition true, waiting out the `for:` window), then **firing**. With a crash-looping pod the whole trip takes a few minutes - crash-loop backoff slows the restarts, then Prometheus scrapes, then the one-minute `for:` elapses.
+
+::image-box
+---
+:src: __static__/alert-lifecycle-v1.png
+:alt: An alert moving through three states along a timeline - inactive while the crash-looping pod's restart count is below the threshold, pending once the expression is true while the one-minute for window elapses, and firing after the window passes, at which point Prometheus hands the firing alert to Alertmanager for routing to email, Slack, or PagerDuty
+:max-width: 900px
+---
+_An alert travels from inactive to pending to firing; once firing, Prometheus hands it to Alertmanager for routing._
+::
 
 Watch the state change from the :tab{text='dev-machine' machine='dev-machine'} terminal. This loop briefly forwards the Prometheus port to the workstation and queries the alert's state every 15 seconds:
 
@@ -287,6 +303,15 @@ If you look at the Alerts page, you will notice the stack's own `KubePodCrashLoo
 ---
 
 The Prometheus operator does not adopt every `PrometheusRule` in the cluster - it only picks up the ones whose labels match the `ruleSelector` configured on the `Prometheus` object. The `kube-prometheus-stack` chart sets that selector to match its Helm release label, so a rule needs `release: monitoring` (matching the release name you installed) to be loaded. Leave it off and your rule is a valid object that Prometheus simply ignores - a common and confusing first mistake. You can confirm a rule was adopted in the Prometheus UI under Status > Rules.
+
+::image-box
+---
+:src: __static__/prometheusrule-adoption-v1.png
+:alt: The Prometheus operator checking the release label on two PrometheusRule objects - it adopts the one labelled release monitoring into the running Prometheus and ignores the one with no matching label, which stays a valid but unloaded object
+:max-width: 800px
+---
+_The operator only loads PrometheusRules whose labels match its selector; a rule missing the release label is silently ignored._
+::
 
 ::
 
