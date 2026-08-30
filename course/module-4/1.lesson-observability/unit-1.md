@@ -172,8 +172,48 @@ spec:
 Apply it from the workstation:
 
 ```bash
-kubectl apply -f <your-rule>.yaml
+kubectl apply -f my-alerts.yaml
 ```
+
+::hint-box
+---
+:summary: How to create the file
+---
+
+Create the file on the :tab{text='dev-machine' machine='dev-machine'} workstation. Open an editor:
+
+```bash
+vi my-alerts.yaml
+```
+
+In `vi`, press `i` to enter insert mode, paste the YAML above, then press `Esc` and type `:wq` and Enter to save and quit. The file lands in your home directory (`/home/laborant`), so `kubectl apply -f my-alerts.yaml` from the same directory picks it up.
+
+Prefer a different editor or no editor at all? You can also write the file in one shot with a here-document:
+
+```bash
+cat <<'EOF' > my-alerts.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: my-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: example
+      rules:
+        - alert: PodCrashLooping
+          expr: kube_pod_container_status_restarts_total{namespace="demo", pod=~"crasher.*"} > 3
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "The crasher pod is crash-looping"
+EOF
+```
+
+::
 
 ::details-box
 ---
