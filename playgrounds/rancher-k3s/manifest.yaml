@@ -114,6 +114,19 @@ playground:
       machine: cplane-01
       number: 30300
       target: window
+    # Kong tab for the Module 2 "Platform Apps - Kong Gateway" lesson. The
+    # lesson installs the Kong ingress controller and pins its HTTP proxy to
+    # NodePort 30081 (Kong's LoadBalancer IP stays pending because Traefik owns
+    # 80/443 on this cluster). This tab opens whatever the student routes
+    # through Kong in the browser. Until that lesson installs Kong the tab shows
+    # a placeholder - harmless in the other lessons that share this playground;
+    # a reload picks Kong up once it is running. Validated: HTTP 200 through
+    # 172.16.0.2:30081 to an nginx backend routed via ingressClassName kong.
+    - kind: http-port
+      name: Kong
+      machine: cplane-01
+      number: 30081
+      target: window
 
   initTasks:
     # Production-faithful model: the student works from the dev-machine
