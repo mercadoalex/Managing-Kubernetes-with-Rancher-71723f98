@@ -10,7 +10,7 @@ Up to now you have worked with a single cluster - the one Rancher itself runs on
 
 This playground gives you two separate clusters:
 
-- **The upstream (management) cluster** runs Rancher. This is the `local` cluster you have seen in the UI. It lives on the `rancher-server` machine.
+- **The upstream (management) cluster** runs Rancher. This is the `local` cluster you have seen in the UI. It lives on the `rancher-server` machine - you do not open a terminal on it directly; you reach it through the :tab{text='Rancher' name='Rancher'} tab for the UI and through the :tab{text='dev-machine' machine='dev-machine'} terminal for `kubectl` (its kubeconfig points at this upstream cluster).
 - **The downstream (user) cluster** is a fresh, empty K3s cluster on the `downstream-01` machine. It has never met Rancher. Bringing it under management is your task.
 
 You drive everything from the :tab{text='dev-machine' machine='dev-machine'} workstation, open the dashboard with the :tab{text='Rancher' name='Rancher'} tab, and run the registration command on the downstream cluster through the :tab{text='downstream-01' machine='downstream-01'} terminal.
