@@ -96,9 +96,10 @@ You should see the Fleet controller running, and a single Fleet `Cluster` object
 
 Create a `GitRepo` in the `fleet-local` namespace that points at a public repository and a path containing deployable manifests. Rancher's own `fleet-examples` repository is the canonical source for learning.
 
-A minimal GitRepo looks like this:
+A minimal GitRepo looks like this. Apply it directly from the :tab{text='dev-machine' machine='dev-machine'} terminal - the here-document pipes the manifest straight into `kubectl`, so there is no file to create:
 
-```yaml
+```bash
+kubectl apply -f - <<'EOF'
 apiVersion: fleet.cattle.io/v1alpha1
 kind: GitRepo
 metadata:
@@ -109,15 +110,10 @@ spec:
   branch: master
   paths:
     - simple
+EOF
 ```
 
-Apply it from the workstation:
-
-```bash
-kubectl apply -f <your-gitrepo>.yaml
-```
-
-You can also create a GitRepo from the Rancher UI under **Continuous Delivery**, which is the same object with a form in front of it.
+If you prefer working with a file, save the manifest between the `EOF` markers to `sample-gitrepo.yaml` and run `kubectl apply -f sample-gitrepo.yaml` instead - the result is identical. You can also create the same GitRepo from the Rancher UI under **Continuous Delivery**, which is just a form in front of this object.
 
 ::details-box
 ---
