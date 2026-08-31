@@ -92,6 +92,15 @@ kubectl -n fleet-local get clusters.fleet.cattle.io
 
 You should see the Fleet controller running, and a single Fleet `Cluster` object representing the local cluster.
 
+::image-box
+---
+:src: __static__/fleet-controller-running-v1.png
+:alt: Terminal output showing the Fleet controller and gitjob pods running in cattle-fleet-system, and a single Fleet Cluster object for the local cluster in fleet-local
+:max-width: 800px
+---
+_Fleet's controller is running and the local cluster is registered with it._
+::
+
 ## Step 2: Create a GitRepo
 
 Create a `GitRepo` in the `fleet-local` namespace that points at a public repository and a path containing deployable manifests. Rancher's own `fleet-examples` repository is the canonical source for learning.
@@ -115,6 +124,15 @@ EOF
 
 If you prefer working with a file, save the manifest between the `EOF` markers to `sample-gitrepo.yaml` and run `kubectl apply -f sample-gitrepo.yaml` instead - the result is identical. You can also create the same GitRepo from the Rancher UI under **Continuous Delivery**, which is just a form in front of this object.
 
+::image-box
+---
+:src: __static__/rancher-continuous-delivery-gitrepo-v1.png
+:alt: The Rancher UI Continuous Delivery view showing the sample GitRepo, with its repository URL, branch, and applied resource state
+:max-width: 900px
+---
+_The same GitRepo in the Rancher UI under Continuous Delivery - the form and the manifest describe the same object._
+::
+
 ::details-box
 ---
 :summary: What is the "simple" path in fleet-examples?
@@ -133,6 +151,15 @@ kubectl -n fleet-local get gitrepo
 kubectl -n fleet-local get bundles
 ```
 
+::image-box
+---
+:src: __static__/fleet-gitrepo-bundle-ready-v1.png
+:alt: Terminal output of kubectl get gitrepo and get bundles in fleet-local, showing the sample GitRepo with its resource count and the Bundle in the Ready state
+:max-width: 800px
+---
+_The GitRepo produced a Bundle, and the Bundle has reached `Ready` - its resources are applied._
+::
+
 The GitRepo reports how many resources it found and applied; the Bundle moves from `NotReady` to `Ready` as its resources land. When the Bundle is `Ready`, the workload it carries is running on the cluster. The `simple` path deploys an app called **`frontend`** into the **`default`** namespace, so confirm it there:
 
 ```bash
@@ -140,6 +167,15 @@ kubectl -n default get deployments
 ```
 
 You will see a `frontend` deployment with its replicas ready - the application Fleet pulled from Git and applied, with no manual `kubectl apply` of the app itself.
+
+::image-box
+---
+:src: __static__/fleet-frontend-deployed-v1.png
+:alt: Terminal output of kubectl get deployments in the default namespace showing the frontend deployment with all replicas ready, deployed by Fleet from the Git repository
+:max-width: 800px
+---
+_The `frontend` app is running in `default` - deployed by Fleet from Git, no manual apply._
+::
 
 ::simple-task
 ---
