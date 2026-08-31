@@ -33,7 +33,14 @@ Fill in the form:
 
 Click **Create**. Rancher builds a standard Kubernetes Deployment from the form and applies it - no YAML required.
 
-<!-- [image placeholder] rancher-deployment-create-form.png - the Create Deployment form filled in -->
+::image-box
+---
+:src: __static__/rancher-deployment-create-form-v1.png
+:alt: The Rancher Create Deployment form filled in with namespace demo, name web, and container image nginx:1.27, ready to create the deployment
+:max-width: 900px
+---
+_The Rancher Create Deployment form - namespace demo, name web, image nginx:1.27._
+::
 
 ::details-box
 ---
@@ -122,6 +129,15 @@ kubectl -n demo get pods -w
 ```
 
 Press `Ctrl+C` to stop watching once you see three `web-*` pods running.
+
+::image-box
+---
+:src: __static__/scaled-pods-v1.png
+:alt: Terminal output of kubectl get pods in the demo namespace showing three running web pods after scaling the deployment to three replicas
+:max-width: 800px
+---
+_After scaling, `kubectl get pods` shows three running `web-*` pods._
+::
 
 ::simple-task
 ---
