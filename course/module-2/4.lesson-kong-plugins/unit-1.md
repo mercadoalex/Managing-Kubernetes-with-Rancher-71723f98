@@ -122,7 +122,18 @@ for i in $(seq 1 8); do
 done
 ```
 
-You will see five `200`s followed by `429`s. Kong also returns rate-limit headers on every response - inspect them:
+You will see five `200`s followed by `429`s.
+
+::image-box
+---
+:src: __static__/kong-ratelimit-burst-v1.png
+:alt: Terminal output of a burst of eight requests to the Kong gateway - the first five return HTTP 200 and the rest return HTTP 429 once the per-minute rate limit is exceeded
+:max-width: 800px
+---
+_The burst trips the limit - five `200`s, then `429 Too Many Requests`._
+::
+
+Kong also returns rate-limit headers on every response - inspect them:
 
 ```bash
 curl -sS -o /dev/null -D - http://172.16.0.2:30081/ | grep -i ratelimit
@@ -208,7 +219,18 @@ curl -sS -o /dev/null -w "valid key -> HTTP %{http_code}\n" -H "apikey: alice-se
 curl -sS -o /dev/null -w "wrong key -> HTTP %{http_code}\n" -H "apikey: nope" http://172.16.0.2:30081/
 ```
 
-You will see `200` for the valid key and `401` for the wrong one. Kong now authenticates every request before it reaches nginx - the service itself needs no auth code at all, which is the whole point of doing it at the gateway.
+You will see `200` for the valid key and `401` for the wrong one.
+
+::image-box
+---
+:src: __static__/kong-keyauth-results-v1.png
+:alt: Terminal output showing two requests to the Kong gateway - the one with a valid apikey header returns HTTP 200 while the one with a wrong key returns HTTP 401
+:max-width: 800px
+---
+_With key-auth attached, a valid key returns `200` and a wrong key is rejected with `401`._
+::
+
+Kong now authenticates every request before it reaches nginx - the service itself needs no auth code at all, which is the whole point of doing it at the gateway.
 
 ::simple-task
 ---
@@ -227,6 +249,20 @@ Key authentication is enforcing - unauthenticated requests get 401.
 :summary: Getting 429 instead of 401 while testing?
 ---
 Both plugins are attached, so if you burst too many requests the rate limiter may answer first with `429` before the auth check returns `401`. Wait a minute for the limit window to reset, then send a single request with no key - you will get the `401`. When testing the plugins independently, it is fine to detach one by re-running the annotate command with only the plugin you want.
+::
+
+::hint-box
+---
+:summary: Quick refresher - what these HTTP status codes mean
+---
+The gateway answers with standard HTTP status codes, so you can read the outcome from the number alone:
+
+- **`200 OK`** - the request succeeded and reached the service. This is the "allowed" path.
+- **`400 Bad Request`** - the request itself was malformed (bad syntax, missing required fields). The server could not understand it.
+- **`401 Unauthorized`** - the request lacked valid credentials. Here it means no API key, or a wrong one - the `key-auth` plugin rejected it. (Despite the name, `401` is really "unauthenticated".)
+- **`429 Too Many Requests`** - the client sent too many requests in the time window. Here it means the `rate-limiting` plugin's limit was exceeded.
+
+Codes in the `4xx` range mean the *client's* request was rejected; `5xx` codes (like `502` or `503`) would instead mean something went wrong on the *server* side - for example, the gateway could not reach the backend service.
 ::
 
 ## Why This Matters
