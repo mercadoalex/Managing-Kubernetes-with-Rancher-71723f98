@@ -210,6 +210,23 @@ Waiting for the imported cluster to reach the Ready state...
 The downstream cluster is Active and managed by Rancher.
 ::
 
+## Importing vs Provisioning: Two Ways a Cluster Joins Rancher
+
+What you did in this lesson is one of two distinct ways a cluster comes under Rancher. It is worth knowing both, because they answer different needs and people often confuse them.
+
+- **Import** (what you just did) - the cluster **already exists and is running**. Rancher installs an agent into it and remote-controls it: workloads, namespaces, RBAC, monitoring, catalog apps. Rancher does not own the cluster's lifecycle - it did not create the cluster and cannot resize its nodes or upgrade its Kubernetes version. Import adopts what you already run.
+- **Provision** - Rancher **creates a brand-new cluster** for you by calling out to infrastructure: a cloud provider's API (EKS, AKS, GKE), a VM platform (vSphere, a node driver), or bare machines you register. Rancher then owns the full lifecycle - it can scale node pools and upgrade Kubernetes versions from the Rancher UI, because it built the cluster.
+
+The cluster *type* is a separate axis from this choice. "Generic" is simply the import option for any standard Kubernetes cluster (which is what your downstream K3s was); EKS/AKS/GKE can be either imported (adopt an existing one) or provisioned (have Rancher create a new one):
+
+| Action | What happens | Rancher's role |
+|---|---|---|
+| Import - Generic | Adopt an existing standard cluster (K3s, on-prem, etc.) | Remote control |
+| Import - EKS / AKS / GKE | Adopt an existing managed cloud cluster | Remote control |
+| Provision - EKS / AKS / GKE / RKE2 | Rancher creates a new cluster | Full lifecycle owner |
+
+This course teaches **import**, because it is the common day-one task - bringing the clusters you already run under one management plane - and it works self-contained in a lab. **Provisioning is not hands-on here**: creating a real cloud cluster needs live cloud credentials and bills real resources, and provisioning onto fresh VMs needs spare infrastructure and node drivers. The concept transfers directly though: same Rancher, same single pane of glass - the difference is only whether Rancher adopts a cluster or builds one.
+
 ## You're Done
 
 You registered a separate, independent cluster into Rancher and watched it come under management through the cluster agent. From here, Rancher can deploy to, monitor, and control the downstream cluster exactly as it does the local one - and you can switch between them from the cluster picker in the UI.
