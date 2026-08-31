@@ -136,10 +136,10 @@ _Creating the GitRepo from the Rancher UI - each field maps to a line in the man
 ::image-box
 ---
 :src: __static__/rancher-continuous-delivery-gitrepo-v1.png
-:alt: The Rancher UI Continuous Delivery view showing the sample GitRepo, with its repository URL, branch, and applied resource state
+:alt: The full Rancher Continuous Delivery dashboard listing the sample GitRepo with its status, repository, and branch, alongside the Fleet navigation and workspace selector
 :max-width: 900px
 ---
-_The same GitRepo in the Rancher UI under Continuous Delivery - the form and the manifest describe the same object._
+_The Continuous Delivery dashboard after the GitRepo is created - it lists the same object you applied with `kubectl`._
 ::
 
 ::details-box
