@@ -164,6 +164,8 @@ In the Rancher UI, go to the cluster management area and choose **Import Existin
 
 Take the registration command Rancher gave you and run it on the downstream cluster - in the :tab{text='downstream-01' machine='downstream-01'} terminal, whose `kubectl` targets the downstream K3s. This installs the Rancher cluster agent, which connects back to Rancher and completes the import.
 
+Two adjustments are needed to make the command work on this playground - see the hints below if it fails.
+
 ::simple-task
 ---
 :tasks: tasks
@@ -178,7 +180,21 @@ The downstream cluster is Active and fully managed by Rancher. Well done.
 
 ::hint-box
 ---
-:summary: Hint 2 - the cluster is registered but stuck at Pending
+:summary: Hint 2 - use Rancher's internal address, not the URL from the browser
 ---
-A cluster that appears but never goes Active usually means the agent did not start on the downstream side. Make sure you ran the registration command in the :tab{text='downstream-01' machine='downstream-01'} terminal (not on the workstation), and that its pods in the `cattle-system` namespace are coming up. If Rancher offered an "insecure" variant of the command, use it - the playground's Rancher serves a self-signed certificate.
+The registration URL Rancher shows is built from your browser's address - the iximiuz proxy hostname (`...iximiuz.com`). The downstream node is not logged in to that proxy, so `curl` fetches a sign-in HTML page instead of the manifest, and `kubectl` then fails with `error validating "STDIN": invalid object`. Swap the hostname for Rancher's internal lab address `172.16.0.2.sslip.io:30443`, keeping the `/v3/import/....yaml` path unchanged. Use the `curl --insecure ...` variant (self-signed certificate).
+::
+
+::hint-box
+---
+:summary: Hint 3 - permission denied reading the K3s kubeconfig
+---
+On downstream-01 you are the `laborant` user, but K3s's kubeconfig at `/etc/rancher/k3s/k3s.yaml` is root-only, so a plain `kubectl` fails with `permission denied`. Pipe the manifest into `sudo k3s kubectl apply -f -` instead - `k3s kubectl` under `sudo` reads the root-owned config correctly.
+::
+
+::hint-box
+---
+:summary: Hint 4 - registered but stuck at Pending
+---
+A cluster that appears but never goes Active usually means the agent did not start on the downstream side. Make sure you applied the manifest in the :tab{text='downstream-01' machine='downstream-01'} terminal (not the workstation) and that its pods in the `cattle-system` namespace are coming up.
 ::

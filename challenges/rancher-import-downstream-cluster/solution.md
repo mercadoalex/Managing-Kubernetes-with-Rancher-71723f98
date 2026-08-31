@@ -10,7 +10,7 @@ You have two clusters that do not yet know about each other: Rancher on the upst
 
 Open the **Rancher** tab and log in. Because this playground's Rancher uses a self-signed certificate, your browser shows a certificate warning the first time - accept it to proceed. Then go to the cluster management view and choose **Import Existing**, then pick the **Generic** type - this works for any standard Kubernetes cluster, which our downstream K3s is. Give it a name like `downstream` and create it.
 
-Rancher immediately shows a registration command. It is a `kubectl apply` of a manifest served from the Rancher server, and it installs the Rancher cluster agent into whatever cluster you run it against. Because our Rancher uses a self-signed certificate, use the **insecure** variant of the command if Rancher offers one.
+Rancher immediately shows a registration command. It is a `kubectl apply` of a manifest served from the Rancher server, and it installs the Rancher cluster agent into whatever cluster you run it against. Because our Rancher uses a self-signed certificate, use the `curl --insecure ...` variant.
 
 From the workstation you can watch the new cluster object appear:
 
@@ -22,12 +22,23 @@ A generated name like `c-xxxxx` shows up next to `local`, sitting in a `Pending`
 
 ## Apply the Registration Command on the Downstream Cluster
 
-Switch to the **downstream-01** terminal. This shell is on the downstream cluster itself, and its `kubectl` points at that cluster - which is exactly where the agent needs to go. Paste and run the registration command Rancher gave you.
+Switch to the **downstream-01** terminal. This shell is on the downstream cluster itself, and its `kubectl` points at that cluster - which is exactly where the agent needs to go.
 
-The agent lands in the `cattle-system` namespace and dials back to Rancher over an outbound tunnel. You can watch it come up:
+Two tweaks make the command work on this playground:
+
+1. **Use Rancher's internal address, not the URL from the browser.** The URL Rancher displays uses the iximiuz proxy hostname, which returns a sign-in page to `curl` (and `kubectl` then errors with `invalid object`). Replace the hostname with the internal `172.16.0.2.sslip.io:30443`, keeping the `/v3/import/....yaml` path.
+2. **Apply with `sudo k3s kubectl`.** As the `laborant` user you cannot read K3s's root-only kubeconfig, so pipe the manifest into `sudo k3s kubectl` rather than plain `kubectl`.
+
+So the command run on `downstream-01` looks like this (substitute your own import token path):
 
 ```bash
-kubectl -n cattle-system get pods
+curl --insecure -sfL "https://172.16.0.2.sslip.io:30443/v3/import/<YOUR-TOKEN>.yaml" | sudo k3s kubectl apply -f -
+```
+
+It creates the `cattle-system` namespace, the `cattle` service account, the credentials secret, and the `cattle-cluster-agent` deployment. The agent dials back to Rancher over an outbound tunnel. You can watch it come up:
+
+```bash
+sudo k3s kubectl -n cattle-system get pods
 ```
 
 ## Watch It Go Active
