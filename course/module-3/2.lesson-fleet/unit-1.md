@@ -14,6 +14,7 @@ In the last lesson you brought a second cluster under Rancher. This lesson intro
 :alt: The Rancher Fleet logo
 :max-width: 360px
 ---
+_Fleet is Rancher's built-in GitOps engine - it ships with Rancher, nothing to install._
 ::
 
 Fleet ships with Rancher, so there is nothing to install. It already runs on the upstream cluster, and you drive it the same way you drive everything else: with `kubectl` from the :tab{text='dev-machine' machine='dev-machine'} workstation, and through the :tab{text='Rancher' name='Rancher'} tab in the UI.
