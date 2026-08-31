@@ -248,6 +248,28 @@ If you *import* an existing EKS cluster, Rancher remote-controls its workloads b
 
 ::
 
+::details-box
+---
+:summary: Is this like Terraform?
+---
+
+It reaches the same outcome as Terraform - declare a cluster, and something calls the cloud API to build it - but the mechanism is different.
+
+**Terraform** is a run-it-yourself tool. You write a declarative config, run `terraform apply`, and its AWS provider converges reality to your config once, then stops until you run it again. You manage the state file, and ongoing changes mean another `apply`.
+
+**Rancher provisioning** is a continuous controller. When you fill in the Create form, Rancher stores your intent as a custom resource on the management cluster, and a built-in operator (for EKS, Rancher's EKS operator) reconciles it - calling the AWS API to create the control plane, node groups, and IAM wiring. Crucially, that controller keeps running: change the node count or Kubernetes version later and it reconciles the difference automatically, no manual re-run. It is the Kubernetes "desired state, continuously reconciled" model applied to whole clusters.
+
+| | Terraform | Rancher provisioning |
+|---|---|---|
+| Model | Declarative, applied on demand | Declarative, continuously reconciled |
+| Engine | Terraform CLI + provider plugins | Kubernetes controllers / operators |
+| State | A state file you manage | Custom resources in the management cluster |
+| Ongoing changes | Re-run `terraform apply` | Edit the spec; the controller reconciles it |
+
+Both call the same kind of cloud APIs underneath. The difference is that Terraform converges once per run, while Rancher keeps the cluster matching your spec the way an operator keeps a Deployment matching its replica count.
+
+::
+
 ## You're Done
 
 You registered a separate, independent cluster into Rancher and watched it come under management through the cluster agent. From here, Rancher can deploy to, monitor, and control the downstream cluster exactly as it does the local one - and you can switch between them from the cluster picker in the UI.
