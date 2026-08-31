@@ -10,8 +10,6 @@ Now that you can navigate Rancher, it is time to put real workloads on the clust
 
 Rancher is already installed on this playground. Open the UI with the :tab{text='Rancher' name='Rancher'} tab, and use the :tab{text='dev-machine' machine='dev-machine'} terminal when you need `kubectl` (it is already pointed at the cluster).
 
-<!-- [image placeholder] rancher-workload-overview.png - the Workload section of the cluster explorer -->
-
 ## Step 1: Create a Namespace
 
 Keep this lesson's work tidy in its own namespace. You can create it in the UI (as you did in the last challenge) or from the terminal - here we use the terminal for speed. In the :tab{text='dev-machine' machine='dev-machine'} terminal:
