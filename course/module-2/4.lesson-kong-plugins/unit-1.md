@@ -278,6 +278,15 @@ Yes - and it is worth understanding exactly how. Once Kong is installed, its CRD
 The nuance: there is no dedicated "Kong plugin" wizard or form in Rancher. Unlike Rancher's own features (projects, catalog apps), third-party CRDs get the generic resource editor, which means you are still writing and reviewing the same YAML. So the UI is a convenience for browsing and one-off edits, but for anything you want to version, review, and reproduce - which is most real work - the manifests you applied here are the source of truth. This lesson used `kubectl` precisely so the exact objects are explicit; the UI would have created identical ones.
 ::
 
+::image-box
+---
+:src: __static__/rancher-ui-edit-kongplugin-v1.png
+:alt: The Rancher UI editing the rate-limit-5 KongPlugin as YAML in the Cluster Explorer resource editor, showing the same plugin definition that was applied with kubectl
+:max-width: 900px
+---
+_Editing the `rate-limit-5` KongPlugin in Rancher's Cluster Explorer - the same YAML you applied with `kubectl`, just in the UI's generic resource editor._
+::
+
 Kong ships dozens more plugins the same way - request/response transformation, JWT and OAuth2 authentication, IP restriction, request logging, CORS - each a `KongPlugin` you attach with the same annotation. The pattern you learned here is the pattern for all of them.
 
 ::card
