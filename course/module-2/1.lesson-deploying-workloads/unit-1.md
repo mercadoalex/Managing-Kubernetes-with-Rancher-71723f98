@@ -33,7 +33,7 @@ Click **Create**. Rancher builds a standard Kubernetes Deployment from the form 
 
 ::image-box
 ---
-:src: __static__/rancher-deployment-create-form-v1.png
+:src: __static__/rancher-deployment-create-form-v2.png
 :alt: The Rancher Create Deployment form filled in with namespace demo, name web, and container image nginx:1.27, ready to create the deployment
 :max-width: 900px
 ---
