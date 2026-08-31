@@ -107,11 +107,18 @@ The command applies a manifest that creates the `cattle-system` namespace on the
 
 ## Step 3: Run the Registration Command on the Downstream Cluster
 
-Copy the registration command Rancher displayed. Then switch to the :tab{text='downstream-01' machine='downstream-01'} terminal - this is the shell *on the downstream cluster itself* - and run it there.
+The registration screen shows **more than one command**. The first is a plain `kubectl apply -f https://.../v3/import/....yaml` - that one works only when Rancher has a trusted (publicly signed) certificate. Because this playground's Rancher uses a **self-signed** certificate, that plain command would fail with a certificate error. Use the **second command instead** - the one that begins with `curl --insecure ... | kubectl apply -f -`. The `--insecure` flag tells `curl` to accept Rancher's self-signed certificate when downloading the manifest.
 
-Because the downstream node uses K3s, its `kubectl` is already configured for its own cluster, so the `kubectl apply` from Rancher lands on the right place.
+Copy that `curl --insecure ... | kubectl apply -f -` command. Then open the :tab{text='downstream-01' machine='downstream-01'} terminal - this is a shell running *on the downstream cluster itself* - and paste and run the command there.
 
-If Rancher's command is a piped `curl ... | kubectl apply -f -`, run it as-is. If you copied a self-signed variant, use the `--insecure` form Rancher offers.
+Run it on **downstream-01, not on the dev-machine**. The downstream node runs K3s, so its `kubectl` already points at the downstream cluster; the manifest therefore installs the Rancher agent into the correct (downstream) cluster. If you accidentally run it on the dev-machine, it would target the upstream Rancher cluster - which is not what you want.
+
+::hint-box
+---
+:summary: Which of the three commands do I use?
+---
+Rancher's import screen typically shows three snippets: (1) a plain `kubectl apply -f <url>`, (2) an `curl --insecure ... | kubectl apply -f -` variant, and (3) a note for clusters that block outbound access. For this lab use **command 2** (the `--insecure` one), because Rancher here has a self-signed certificate. Run it in the :tab{text='downstream-01' machine='downstream-01'} terminal. You do not need commands 1 or 3.
+::
 
 ::details-box
 ---
