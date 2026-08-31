@@ -257,6 +257,26 @@ playground:
         done
         kubectl patch settings.management.cattle.io server-url \
           --type merge -p '{"value":"https://172.16.0.2.sslip.io:30443"}'
+        # CRITICAL: patching the server-url SETTING alone is not durable - Rancher
+        # rewrites server-url to whatever address the browser first opens the UI
+        # from. In this playground the student opens the Rancher tab via the
+        # iximiuz proxy hostname (…iximiuz.com), so server-url drifts to that
+        # proxy URL. The downstream cluster agent then inherits CATTLE_SERVER =
+        # the proxy hostname, which is auth-gated and returns HTML instead of the
+        # Rancher API, so the agent crash-loops and the imported cluster is stuck
+        # Pending forever.
+        #
+        # The fix is to pin the URL via the CATTLE_SERVER_URL env var on the
+        # Rancher deployment. Rancher treats that env as authoritative and does
+        # NOT auto-overwrite it on browser access, so server-url stays internal
+        # regardless of how the UI is reached. This keeps the agent's
+        # CATTLE_SERVER pointed at the routable internal address.
+        kubectl -n cattle-system set env deployment/rancher \
+          CATTLE_SERVER_URL=https://172.16.0.2.sslip.io:30443
+        kubectl -n cattle-system rollout status deployment/rancher --timeout=300s
+        # Re-assert the setting after the rollout, in case it was touched.
+        kubectl patch settings.management.cattle.io server-url \
+          --type merge -p '{"value":"https://172.16.0.2.sslip.io:30443"}' || true
 
   accessControl:
     canList:
