@@ -109,15 +109,51 @@ The command applies a manifest that creates the `cattle-system` namespace on the
 
 The registration screen shows **more than one command**. The first is a plain `kubectl apply -f https://.../v3/import/....yaml` - that one works only when Rancher has a trusted (publicly signed) certificate. Because this playground's Rancher uses a **self-signed** certificate, that plain command would fail with a certificate error. Use the **second command instead** - the one that begins with `curl --insecure ... | kubectl apply -f -`. The `--insecure` flag tells `curl` to accept Rancher's self-signed certificate when downloading the manifest.
 
-Copy that `curl --insecure ... | kubectl apply -f -` command. Then open the :tab{text='downstream-01' machine='downstream-01'} terminal - this is a shell running *on the downstream cluster itself* - and paste and run the command there.
+Copy that `curl --insecure ... | kubectl apply -f -` command. Then open the :tab{text='downstream-01' machine='downstream-01'} terminal - this is a shell running *on the downstream cluster itself* - to run it. Run it on **downstream-01, not on the dev-machine**: the manifest must install the Rancher agent into the downstream cluster, and the dev-machine terminal targets the upstream cluster instead.
 
-Run it on **downstream-01, not on the dev-machine**. The downstream node runs K3s, so its `kubectl` already points at the downstream cluster; the manifest therefore installs the Rancher agent into the correct (downstream) cluster. If you accidentally run it on the dev-machine, it would target the upstream Rancher cluster - which is not what you want.
+One adjustment before you run it. On this K3s node you are logged in as the `laborant` user, but K3s's kubeconfig (`/etc/rancher/k3s/k3s.yaml`) is readable only by root. If you run Rancher's command exactly as shown, `kubectl` cannot read that file and fails:
+
+::image-box
+---
+:src: __static__/downstream-import-permission-error-v1.png
+:alt: Terminal on downstream-01 showing the error - unable to read /etc/rancher/k3s/k3s.yaml, permission denied - when the registration command is run as the laborant user without sudo
+:max-width: 900px
+---
+_Running the raw command as `laborant` fails: the K3s kubeconfig is root-only._
+::
+
+Two adjustments are needed before the command will work here.
+
+**First, the hostname.** The URL Rancher shows uses the address from your browser's tab - which in this playground is the iximiuz proxy hostname (something like `6a95...node-eu-14f6.iximiuz.com`). That proxy requires a login, so the downstream node cannot fetch the manifest from it - `curl` would silently download an HTML sign-in page instead of the YAML, and `kubectl` would then fail with `error validating "STDIN": invalid object`. The downstream cluster must instead reach Rancher at its **internal** address on the lab network: `172.16.0.2.sslip.io:30443`. So replace the hostname in the URL, keeping the `/v3/import/....yaml` path exactly as Rancher generated it.
+
+**Second, the permission fix above** - use `sudo k3s kubectl` instead of plain `kubectl`.
+
+Putting both together, the command to run on **downstream-01** looks like this (substitute the `/v3/import/....yaml` path from your own registration screen):
+
+```bash
+curl --insecure -sfL "https://172.16.0.2.sslip.io:30443/v3/import/<YOUR-TOKEN>.yaml" | sudo k3s kubectl apply -f -
+```
+
+When it works, you will see a series of `created` lines - the `cattle-system` namespace, the `cattle` service account, cluster role bindings, a `cattle-credentials-...` secret, and the `cattle-cluster-agent` deployment and service. That agent is what connects back to Rancher.
+
+::hint-box
+---
+:summary: Why swap the hostname? (the manifest downloads an HTML login page otherwise)
+---
+The registration URL Rancher displays is built from the address in your browser, which here is the authenticated iximiuz proxy (`...iximiuz.com`). A `curl` from the downstream node is not logged in to that proxy, so it receives the proxy's sign-in HTML page rather than the agent manifest - and `kubectl apply` then reports `invalid object to validate` because it was handed HTML, not YAML. Rancher's own `server-url` for this playground is the internal `https://172.16.0.2.sslip.io:30443`, which is directly reachable from the downstream cluster over the lab network. Fetching the same `/v3/import/....yaml` path from that internal address returns the real manifest.
+::
 
 ::hint-box
 ---
 :summary: Which of the three commands do I use?
 ---
-Rancher's import screen typically shows three snippets: (1) a plain `kubectl apply -f <url>`, (2) an `curl --insecure ... | kubectl apply -f -` variant, and (3) a note for clusters that block outbound access. For this lab use **command 2** (the `--insecure` one), because Rancher here has a self-signed certificate. Run it in the :tab{text='downstream-01' machine='downstream-01'} terminal. You do not need commands 1 or 3.
+Rancher's import screen shows three snippets:
+
+1. A plain `kubectl apply -f <url>` - **skip it.** It fails here because Rancher's certificate is self-signed.
+2. A `curl --insecure ... | kubectl apply -f -` variant - **use this one**, changing `kubectl` to `sudo k3s kubectl` for the permission fix above.
+3. A `kubectl create clusterrolebinding cluster-admin-binding ...` line - **skip it.** That is a prerequisite for managed clusters (like GKE) where your kubeconfig user is not cluster-admin. K3s's admin user already has cluster-admin, so you do not need it.
+
+Only command 2 matters on this playground, run in the :tab{text='downstream-01' machine='downstream-01'} terminal.
 ::
 
 ::details-box
