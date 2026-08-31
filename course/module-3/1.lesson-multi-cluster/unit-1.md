@@ -177,6 +177,15 @@ kubectl get clusters.management.cattle.io
 
 You now see a second entry alongside `local`.
 
+::image-box
+---
+:src: __static__/clusters-list-local-downstream-v1.png
+:alt: Terminal output of kubectl get clusters.management.cattle.io on the dev-machine, showing the built-in local cluster and the newly imported downstream cluster with a generated c-xxxxx name
+:max-width: 800px
+---
+_From the workstation, `kubectl get clusters.management.cattle.io` now lists the imported cluster next to `local`._
+::
+
 ::simple-task
 ---
 :tasks: tasks
