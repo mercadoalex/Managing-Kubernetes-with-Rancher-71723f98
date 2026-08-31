@@ -133,11 +133,13 @@ kubectl -n fleet-local get gitrepo
 kubectl -n fleet-local get bundles
 ```
 
-The GitRepo reports how many resources it found and applied; the Bundle moves from `NotReady` to `Ready` as its resources land. When the Bundle is `Ready`, the workload it carries is running on the cluster - confirm it the same way you would any deployment:
+The GitRepo reports how many resources it found and applied; the Bundle moves from `NotReady` to `Ready` as its resources land. When the Bundle is `Ready`, the workload it carries is running on the cluster. The `simple` path deploys an app called **`frontend`** into the **`default`** namespace, so confirm it there:
 
 ```bash
-kubectl get deployments -A | grep -i simple
+kubectl -n default get deployments
 ```
+
+You will see a `frontend` deployment with its replicas ready - the application Fleet pulled from Git and applied, with no manual `kubectl apply` of the app itself.
 
 ::simple-task
 ---
