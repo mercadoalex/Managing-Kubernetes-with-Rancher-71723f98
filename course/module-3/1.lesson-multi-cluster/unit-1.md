@@ -56,6 +56,15 @@ Rancher represents every cluster it manages as a `clusters.management.cattle.io`
 
 Open the :tab{text='Rancher' name='Rancher'} tab and log in. Rancher here uses a self-signed certificate, so your browser shows a certificate warning the first time you open the tab - accept it to continue. From the home screen, click **Import Existing** (under **Cluster Management > Clusters**, use **Import Existing**).
 
+::image-box
+---
+:src: __static__/rancher-import-generic-v1.png
+:alt: The Rancher Cluster Management screen with the Import Existing option and the list of cluster types to choose from, including Generic
+:max-width: 900px
+---
+_Cluster Management > Import Existing - choose how to register a cluster; Generic covers any standard Kubernetes cluster._
+::
+
 ::details-box
 ---
 :summary: Why the browser warns about the certificate
@@ -67,9 +76,25 @@ This playground runs Rancher with a self-signed certificate - the same `ingress.
 
 Choose the **Generic** cluster type (this covers any standard Kubernetes cluster, which is what our downstream K3s is), give the cluster a name such as `downstream`, and click **Create**.
 
+::image-box
+---
+:src: __static__/rancher-import-generic-form-v1.png
+:alt: The Rancher Generic cluster import form with the cluster name set to downstream, ready to create the import entry
+:max-width: 900px
+---
+_Naming the Generic import `downstream` before clicking Create._
+::
+
 Rancher then shows you a **registration command** - a `kubectl apply` of a manifest served from the Rancher server. That manifest installs the Rancher **cluster agent** into the target cluster, which dials back to Rancher and completes the registration.
 
-<!-- [image placeholder] rancher-import-registration-command.png - the registration command Rancher displays after creating a Generic import -->
+::image-box
+---
+:src: __static__/rancher-import-registration-command.png
+:alt: The Rancher registration command screen showing the kubectl apply command (including the insecure curl variant) to run on the downstream cluster to install the cluster agent
+:max-width: 900px
+---
+_The registration command Rancher displays - a `kubectl apply` that installs the cluster agent on the downstream cluster. Use the insecure variant here (self-signed CA)._
+::
 
 ::details-box
 ---
