@@ -126,6 +126,15 @@ If you prefer working with a file, save the manifest between the `EOF` markers t
 
 ::image-box
 ---
+:src: __static__/cd-app-bundle-create-gitrepo-v1.png
+:alt: The Rancher UI Continuous Delivery form for creating a GitRepo, with fields for the repository URL, branch, and paths that map directly to the GitRepo manifest
+:max-width: 900px
+---
+_Creating the GitRepo from the Rancher UI - each field maps to a line in the manifest above._
+::
+
+::image-box
+---
 :src: __static__/rancher-continuous-delivery-gitrepo-v1.png
 :alt: The Rancher UI Continuous Delivery view showing the sample GitRepo, with its repository URL, branch, and applied resource state
 :max-width: 900px
