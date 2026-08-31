@@ -184,6 +184,35 @@ Assigning a user "Project Member" on `team-alpha` grants them the right permissi
 
 ::details-box
 ---
+:summary: Can I grant access to just one workload? (e.g. only the login pod)
+---
+
+A common question: "Can I let John write only to the `microservice-login` pod, and nothing else?" The honest answer is that Kubernetes RBAC - which everything here sits on - is granular along three axes, but **not down to an arbitrary single object**.
+
+RBAC lets you combine:
+
+- **Verbs** - `get`, `list`, `watch`, and the write verbs `create`, `update`, `patch`, `delete`.
+- **Resource types** - `pods`, `deployments`, `services`, `configmaps`, and so on.
+- **Namespace** - a `Role` applies within one namespace.
+
+So you can express "John may update `pods` in the `login` namespace". What plain RBAC **cannot** cleanly express is "John may update only the pod named `microservice-login`". There is a narrow `resourceNames` field that restricts `get`/`update`/`patch`/`delete` to named objects:
+
+```yaml
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  resourceNames: ["microservice-login"]
+  verbs: ["get", "update", "patch", "delete"]
+```
+
+But it has real limits: it does **not** apply to `list`, `watch`, or `create`, and pods created by a Deployment get random suffixes (`microservice-login-7d9f8-abcde`) that change on every restart - so pinning a rule to a pod name is fragile. `resourceNames` is only practical for stable, individually named objects like a specific ConfigMap or Secret.
+
+The idiomatic answer is therefore **scope by namespace, not by object**: give the login service its own namespace, then grant John write access to workloads *in that namespace*. That is stable, clear, and how teams do it in practice. In Rancher, the built-in Project roles are deliberately coarse; for finer rules you write a custom **RoleTemplate**, or apply a plain Kubernetes `Role` + `RoleBinding` with `kubectl` - Rancher coexists with hand-written RBAC.
+
+::
+
+::details-box
+---
 :summary: What Rancher generates under the hood
 ---
 
