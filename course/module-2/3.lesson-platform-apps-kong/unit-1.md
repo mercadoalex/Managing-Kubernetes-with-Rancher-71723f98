@@ -8,6 +8,15 @@ name: platform-apps-kong
 
 So far you have deployed your own workloads through Rancher. But a real platform team spends much of its time installing and managing *shared tooling* - ingress controllers, cost dashboards, service meshes, backup operators. Rancher's Apps catalog is where that happens: it is the single place you add tools to a cluster and manage their lifecycle.
 
+::image-box
+---
+:src: __static__/rancher-apps-charts-catalog-v1.png
+:alt: The Rancher Apps Charts catalog showing a grid of installable platform tools such as Dynatrace, Elastic, F5, Gitea, and HashiCorp Consul, illustrating the wide range of tooling available to install onto a cluster
+:max-width: 900px
+---
+_The Rancher Apps > Charts catalog - a broad range of platform tooling, from observability to service mesh to Git servers, all installable onto the cluster._
+::
+
 In this lesson you will add a Helm repository to Rancher's Apps, install the Kong ingress controller from it, and route one of your workloads through the Kong gateway. Kong joins Traefik (which k3s ships as the default) as a *second* ingress controller - a common real-world setup where different teams or APIs want a gateway with richer routing and plugin support.
 
 ::image-box
