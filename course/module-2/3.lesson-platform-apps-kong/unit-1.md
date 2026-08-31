@@ -88,6 +88,15 @@ kubectl get ingressclass
 
 You will see two classes: `traefik (default)` and `kong`. The default is what an Ingress uses when it does not name a class; to send traffic through Kong you name it explicitly, which you do next.
 
+::image-box
+---
+:src: __static__/ingressclass-kong-traefik-v1.png
+:alt: Terminal output of kubectl get ingressclass showing two ingress classes, traefik marked as default and kong, both registered on the cluster
+:max-width: 800px
+---
+_Both ingress classes registered - `traefik (default)` and `kong`. An Ingress picks one with `ingressClassName`._
+::
+
 ::simple-task
 ---
 :tasks: tasks
@@ -162,7 +171,14 @@ curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://172.16.0.2:30081/
 
 A `HTTP 200` means the request went through Kong, which matched the Ingress rule and forwarded it to the `web` Service - the nginx welcome page. You can also open it in the browser with the :tab{text='Kong' name='Kong'} tab, which points at the gateway's NodePort.
 
-<!-- [image placeholder] kong-route-browser.png - the nginx welcome page served through the Kong tab -->
+::image-box
+---
+:src: __static__/kong-route-browser.png
+:alt: A browser showing the default nginx welcome page served through the Kong gateway tab, confirming traffic reached the web workload via Kong on its NodePort
+:max-width: 900px
+---
+_The nginx welcome page reached through the Kong tab - proof the request flowed through the Kong gateway to the web workload._
+::
 
 ::simple-task
 ---
