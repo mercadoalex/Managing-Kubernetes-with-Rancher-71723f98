@@ -10,7 +10,61 @@ In the last lesson you installed Kong and routed a workload through it. That alo
 
 On Kubernetes, you do not configure these through a separate Kong admin API. You declare them as **Kubernetes resources** using Kong's own CRDs, and attach them to a route with an annotation. This lesson applies two of the most common policies to the `web` workload from the previous lesson: a **rate limit**, then **key authentication**. Each is a few lines of YAML, and each produces a visible, deterministic change in how the gateway responds.
 
-You work from the :tab{text='dev-machine' machine='dev-machine'} terminal. This lesson assumes Kong is installed and the `web` workload in the `demo` namespace is routed through it, exactly as you left it in the previous lesson. If you are starting fresh, re-run that lesson's install and route steps first.
+You work from the :tab{text='dev-machine' machine='dev-machine'} terminal. This lesson assumes Kong is installed and the `web` workload in the `demo` namespace is routed through it, exactly as you set up in the previous lesson.
+
+Playgrounds are temporary, so if you come back to a fresh cluster - a new day, a new session, or you simply do not remember - you will not have Kong or the `web` route anymore. The hint below rebuilds that starting point in one block so you can begin from a known state.
+
+::hint-box
+---
+:summary: Starting fresh? Rebuild Kong and the routed workload first
+---
+Run this in the :tab{text='dev-machine' machine='dev-machine'} terminal to get back to where the previous lesson left off - Kong installed, and a `web` workload routed through it. It is safe to run even if some pieces already exist.
+
+```bash
+export KUBECONFIG=$HOME/.kube/config
+
+# Install Kong (skips if already installed)
+helm repo add kong https://charts.konghq.com
+helm repo update
+helm upgrade --install kong kong/ingress \
+  --namespace kong --create-namespace \
+  --set gateway.proxy.type=NodePort \
+  --set gateway.proxy.http.nodePort=30081 \
+  --wait --timeout 5m
+
+# Create and route the web workload
+kubectl get namespace demo >/dev/null 2>&1 || kubectl create namespace demo
+kubectl -n demo get deploy web >/dev/null 2>&1 || kubectl -n demo create deployment web --image=nginx:1.27
+kubectl -n demo get svc web >/dev/null 2>&1 || kubectl -n demo expose deployment web --port=80
+kubectl apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: demo
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
+EOF
+```
+
+Confirm the starting point is good - this should print `HTTP 200`:
+
+```bash
+curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://172.16.0.2:30081/
+```
+
+Once you see `200`, the route works and you are ready to attach plugins.
+::
 
 ::image-box
 ---
