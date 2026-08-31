@@ -10,7 +10,14 @@ When more than one team shares a cluster, you need ways to organize resources, c
 
 Open the :tab{text='Rancher' name='Rancher'} tab for the UI, and use the :tab{text='dev-machine' machine='dev-machine'} terminal for `kubectl`.
 
-<!-- [image placeholder] rancher-projects-overview.png - Projects/Namespaces page showing projects grouping namespaces -->
+::image-box
+---
+:src: __static__/rancher-projects-namespaces-v1.png
+:alt: The Rancher Projects/Namespaces page for the local cluster, showing namespaces grouped under their projects such as Default and System
+:max-width: 900px
+---
+_Rancher's Projects/Namespaces page groups namespaces under the projects that own them._
+::
 
 ## Namespaces, Projects, and How They Relate
 
@@ -41,7 +48,14 @@ Each has a generated name like `p-xxxxx` and a human-friendly `spec.displayName`
 
 In the Rancher UI, enter the **local** cluster, then go to **Cluster > Projects/Namespaces** and click **Create Project**. Name it `team-alpha` and create it.
 
-<!-- [image placeholder] rancher-create-project.png - the Create Project form -->
+::image-box
+---
+:src: __static__/rancher-create-project-v1.png
+:alt: The Rancher Create Project form with the project name set to team-alpha, ready to create a new project in the local cluster
+:max-width: 900px
+---
+_The Rancher Create Project form - naming the new project team-alpha._
+::
 
 Confirm it exists from the workstation:
 
@@ -50,6 +64,15 @@ kubectl -n local get projects.management.cattle.io -o custom-columns=NAME:.metad
 ```
 
 You will see `team-alpha` in the list alongside the built-in `Default` and `System` projects.
+
+::image-box
+---
+:src: __static__/projects-list-output-v1.png
+:alt: Terminal output of kubectl listing management.cattle.io projects, showing the team-alpha project alongside the built-in Default and System projects with their generated p-xxxxx names
+:max-width: 800px
+---
+_The `kubectl` project list shows `team-alpha` next to the built-in `Default` and `System` projects._
+::
 
 ::simple-task
 ---
