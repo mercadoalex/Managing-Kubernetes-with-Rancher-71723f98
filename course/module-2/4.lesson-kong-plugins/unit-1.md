@@ -14,7 +14,7 @@ You work from the :tab{text='dev-machine' machine='dev-machine'} terminal. This 
 
 ::image-box
 ---
-:src: __static__/kong-plugins-flow-v1.png
+:src: __static__/kong-plugins-flow-v2.png
 :alt: A request passing through the Kong gateway, which applies attached plugins in order - a rate-limiting plugin that rejects requests over the limit with HTTP 429 and a key-auth plugin that rejects requests without a valid key with HTTP 401 - before forwarding allowed requests to the web service
 :max-width: 900px
 ---
