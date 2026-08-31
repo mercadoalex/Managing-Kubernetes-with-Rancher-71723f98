@@ -137,6 +137,15 @@ Check it:
 kubectl -n alpha-web describe resourcequota alpha-web-quota
 ```
 
+::image-box
+---
+:src: __static__/resourcequota-describe-v1.png
+:alt: Terminal output of kubectl describe resourcequota for alpha-web-quota, listing each resource with its used and hard limits for CPU requests and limits, memory requests and limits, and pods
+:max-width: 800px
+---
+_`kubectl describe` on the quota shows each capped resource with its used and hard limits._
+::
+
 ::simple-task
 ---
 :tasks: tasks
