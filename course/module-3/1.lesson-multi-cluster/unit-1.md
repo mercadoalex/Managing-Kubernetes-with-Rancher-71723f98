@@ -21,6 +21,7 @@ You drive everything from the :tab{text='dev-machine' machine='dev-machine'} wor
 :alt: One management cluster running Rancher and a separate downstream K3s cluster on the same network, with the downstream cluster agent dialing back to Rancher over an outbound tunnel
 :max-width: 900px
 ---
+_Rancher runs on the upstream management cluster; the downstream cluster's agent dials back over an outbound tunnel, so Rancher manages it without a direct inbound route._
 ::
 
 ::details-box
