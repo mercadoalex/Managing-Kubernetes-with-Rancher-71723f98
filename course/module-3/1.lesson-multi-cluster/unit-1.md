@@ -227,6 +227,27 @@ The cluster *type* is a separate axis from this choice. "Generic" is simply the 
 
 This course teaches **import**, because it is the common day-one task - bringing the clusters you already run under one management plane - and it works self-contained in a lab. **Provisioning is not hands-on here**: creating a real cloud cluster needs live cloud credentials and bills real resources, and provisioning onto fresh VMs needs spare infrastructure and node drivers. The concept transfers directly though: same Rancher, same single pane of glass - the difference is only whether Rancher adopts a cluster or builds one.
 
+### A Look at Provisioning EKS (demonstration only)
+
+The walkthrough below is a **demonstration, not a lab exercise**. There is nothing to run here - provisioning a real Amazon EKS cluster requires your own AWS account and credentials, and it creates billed cloud resources. Do not enter cloud credentials into this or any shared playground. The screenshots show the flow so you can recognize it when you do it later in an environment you control.
+
+At a high level, provisioning EKS with Rancher looks like this:
+
+1. In **Cluster Management**, choose **Create**, then **Amazon EKS**.
+2. Add an **AWS cloud credential** (an access key scoped to the EKS/EC2 permissions Rancher needs). Rancher stores it and uses it to call the AWS API on your behalf.
+3. Pick the **region**, **Kubernetes version**, and a **node group** (instance type and count).
+4. Click **Create**. Rancher calls AWS, EKS provisions the control plane and node group, and the cluster moves to **Active** - now managed in Rancher alongside your other clusters.
+5. Because Rancher *built* this cluster, it owns the lifecycle: you can scale the node group and upgrade the Kubernetes version from the Rancher UI - the difference from an imported cluster.
+
+::details-box
+---
+:summary: Provisioning vs importing EKS - the practical difference
+---
+
+If you *import* an existing EKS cluster, Rancher remote-controls its workloads but leaves node pools and version upgrades to the AWS console. If you *provision* EKS through Rancher (the flow above), Rancher owns that lifecycle too - scaling and upgrades happen from Rancher. Same destination (an EKS cluster managed by Rancher), different amount of control depending on who created it. When you try this in your own account, remember to delete the cluster afterward so it stops billing, and revoke the temporary credentials you used.
+
+::
+
 ## You're Done
 
 You registered a separate, independent cluster into Rancher and watched it come under management through the cluster agent. From here, Rancher can deploy to, monitor, and control the downstream cluster exactly as it does the local one - and you can switch between them from the cluster picker in the UI.
