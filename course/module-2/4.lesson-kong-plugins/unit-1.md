@@ -269,6 +269,15 @@ Codes in the `4xx` range mean the *client's* request was rejected; `5xx` codes (
 
 Everything you did here is an ordinary Kubernetes object - `KongPlugin`, `KongConsumer`, a `Secret`, and an annotation. That is what separates an API gateway from a plain ingress controller: cross-cutting concerns like throttling and authentication move *out* of every service and *into* the gateway, declared as resources you version and review like any other manifest. Traefik routes; Kong routes **and** governs.
 
+::details-box
+---
+:summary: Could I have done all this from the Rancher UI?
+---
+Yes - and it is worth understanding exactly how. Once Kong is installed, its CRDs (`KongPlugin`, `KongConsumer`, and the rest) are registered types in the cluster, so they appear in Rancher's **Cluster Explorer** under **More Resources**. You can browse them, and click **Create** to add a new one - Rancher opens its YAML editor with the same fields you wrote here, and applies the object through the Kubernetes API exactly as `kubectl apply` does. The annotation on the Ingress is editable the same way, from the Ingress's edit screen.
+
+The nuance: there is no dedicated "Kong plugin" wizard or form in Rancher. Unlike Rancher's own features (projects, catalog apps), third-party CRDs get the generic resource editor, which means you are still writing and reviewing the same YAML. So the UI is a convenience for browsing and one-off edits, but for anything you want to version, review, and reproduce - which is most real work - the manifests you applied here are the source of truth. This lesson used `kubectl` precisely so the exact objects are explicit; the UI would have created identical ones.
+::
+
 Kong ships dozens more plugins the same way - request/response transformation, JWT and OAuth2 authentication, IP restriction, request logging, CORS - each a `KongPlugin` you attach with the same annotation. The pattern you learned here is the pattern for all of them.
 
 ::card
