@@ -22,14 +22,6 @@ _Rancher is the single place you install and manage platform tooling - the Apps 
 
 Rancher is already installed on this playground. Open the UI with the :tab{text='Rancher' name='Rancher'} tab, and use the :tab{text='dev-machine' machine='dev-machine'} terminal for `kubectl` and `helm` (both are already pointed at the cluster).
 
-::image-box
----
-:src: __static__/platform-apps-on-rancher.png
-:alt: Rancher sitting on top of a Kubernetes cluster as the single place to install and manage shared platform apps, with the Kong ingress controller added from the Apps catalog alongside built-in tooling
-:max-width: 700px
----
-::
-
 ## Step 1: Understand the Apps Catalog
 
 Rancher's Apps catalog is not a fixed list of applications. It works in two parts:
