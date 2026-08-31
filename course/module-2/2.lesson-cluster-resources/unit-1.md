@@ -176,9 +176,9 @@ Kubernetes RBAC has four building blocks: **Role** and **RoleBinding** (namespac
 Rancher layers friendlier, ready-made roles on top - and crucially, some of them are **Project-scoped**, which plain Kubernetes cannot express on its own:
 
 - **Cluster Owner / Cluster Member** - control at the whole-cluster level.
-- **Project Owner** - full control over everything in a Project's namespaces.
-- **Project Member** - manage workloads within a Project.
-- **Read Only** - view without changing.
+- **Project Owner** - full control over everything in a Project's namespaces, *plus* the ability to manage the project itself: add or remove namespaces, set project-level quotas, and grant other users access.
+- **Project Member** - create, view, edit, and delete the everyday workload and configuration objects inside the Project's namespaces: Deployments, Pods, ReplicaSets, StatefulSets, DaemonSets, Jobs and CronJobs, Services, Ingresses, ConfigMaps, Secrets, and PersistentVolumeClaims. A Project Member works *inside* the namespaces but cannot add or remove namespaces from the Project, change the project's quotas, or grant other users access - those are Project Owner actions.
+- **Read Only** - view all of the above without creating, editing, or deleting anything.
 
 Assigning a user "Project Member" on `team-alpha` grants them the right permissions across *every* namespace in that project at once - Rancher translates that into the underlying Kubernetes RoleBindings for you. You manage these under **Cluster > Projects/Namespaces** (per project) or **Users & Authentication** (globally).
 
