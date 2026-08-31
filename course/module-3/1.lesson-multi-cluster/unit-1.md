@@ -214,6 +214,25 @@ The downstream cluster is Active and managed by Rancher.
 
 You registered a separate, independent cluster into Rancher and watched it come under management through the cluster agent. From here, Rancher can deploy to, monitor, and control the downstream cluster exactly as it does the local one - and you can switch between them from the cluster picker in the UI.
 
+Two things worth being clear about as a conclusion. First, the downstream cluster was a **real, running Kubernetes cluster the whole time** - importing did not create it. What importing produced is two distinct things: a management **record** on the upstream (the `clusters.management.cattle.io` object, Rancher's handle for the cluster) and a live **agent** running inside the downstream cluster that connects the two. The record is a definition; the cluster behind it is a live system, and the agent is what makes Rancher's control of it real rather than just an entry in a list. Second, Rancher here is a **remote control**, not a new owner: it manages the cluster in place, it did not move or re-provision it.
+
+::details-box
+---
+:summary: What does importing look like for EKS, AKS, or GKE?
+---
+
+The same "install an agent, connect it to Rancher" flow applies to a managed cloud cluster - and the key point is that Rancher is a **remote control over a cluster the cloud provider still owns**, not a re-creation of it.
+
+When you import an existing **EKS** (AWS), **AKS** (Azure), or **GKE** (Google) cluster:
+
+- The cluster keeps running on the cloud provider, on its control plane, billed by them. Nothing moves.
+- Rancher installs the same cluster agent into it, and from then on you manage its **workloads, namespaces, RBAC, monitoring, and catalog apps** through Rancher's single pane of glass alongside all your other clusters.
+- What Rancher does **not** do for a purely imported managed cluster is control the cloud control plane itself. You cannot resize the node pool or upgrade the Kubernetes version *from Rancher* - those stay in the AWS/Azure/GCP console, because the provider owns that lifecycle.
+
+There is a separate mode - **provisioning** - where Rancher *creates* the cluster in the cloud through the provider's API and then manages its full lifecycle, including scaling and upgrades. That is a different workflow from importing. Importing adopts a cluster that already exists; provisioning builds a new one. This lesson did an import, which is the more common day-one task: bring the clusters you already run under one management plane.
+
+::
+
 The challenge below has you do the import on your own and confirm the cluster reaches the Active state. Solving it records your progress.
 
 ::card
