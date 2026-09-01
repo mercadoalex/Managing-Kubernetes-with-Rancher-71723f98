@@ -89,6 +89,15 @@ Open the `student/sample-app` repository and look at `manifests/web.yaml` - a pl
 _The `student/sample-app` repository in Gitea, holding `manifests/web.yaml` - the manifest Fleet watches._
 ::
 
+::image-box
+---
+:src: __static__/gitea-web-yaml-content-v1.png
+:alt: The contents of manifests/web.yaml viewed in Gitea, an nginx Deployment named web with replicas set to 1 - the value the student will change to trigger a Fleet reconcile
+:max-width: 900px
+---
+_`manifests/web.yaml` in Gitea - an nginx Deployment at `replicas: 1`, the line you will change later._
+::
+
 ## Step 2: Point Fleet at the Gitea Repository
 
 ::remark-box
