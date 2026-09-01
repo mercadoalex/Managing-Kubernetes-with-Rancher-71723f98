@@ -267,7 +267,18 @@ kubectl -n monitoring get secret monitoring-grafana \
   -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-In Grafana, go to **Connections > Data sources > Add data source**, choose **Loki**, and set the URL to the in-cluster Loki service:
+In Grafana, go to **Connections > Data sources**. You will see the data sources the monitoring stack already configured, including Prometheus. Click **Add data source** and choose **Loki**.
+
+::image-box
+---
+:src: __static__/grafana-datasources-list-v1.png
+:alt: The Grafana Connections Data sources screen listing the data sources already configured by the monitoring stack, with the option to add a new one
+:max-width: 900px
+---
+_Grafana's Data sources view - Prometheus is already here from the monitoring lesson; you add Loki alongside it._
+::
+
+Set the URL to the in-cluster Loki service:
 
 ```
 http://loki.loki.svc.cluster.local:3100
