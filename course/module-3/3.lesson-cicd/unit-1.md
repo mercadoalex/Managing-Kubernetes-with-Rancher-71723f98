@@ -33,7 +33,22 @@ This lesson uses the pull-based model, because that is what Rancher Fleet is and
 :summary: Where do build pipelines fit, then?
 ---
 
-Pull-based GitOps and build pipelines are complementary, not competing. In a full setup, a CI pipeline (Gitea Actions, GitHub Actions, GitLab CI, and so on) does the *integration* work: it builds and tests your container image, pushes it to a registry, and then updates the manifests in Git - for example, bumping the image tag. Fleet then does the *delivery*: it sees the new commit and rolls the change out to the clusters. The pipeline never touches the cluster directly; it just changes what is in Git, and Fleet takes it from there. In this lesson you play the part of the pipeline by editing and committing the manifest yourself, so you can see the delivery half clearly.
+Pull-based GitOps and build pipelines are complementary, not competing. In a full setup, a CI pipeline does the *integration* work: it builds and tests your container image, pushes it to a registry, and then updates the manifests in Git - for example, bumping the image tag. Fleet then does the *delivery*: it sees the new commit and rolls the change out to the clusters. The pipeline never touches the cluster directly; it just changes what is in Git, and Fleet takes it from there. In this lesson you play the part of the pipeline by editing and committing the manifest yourself, so you can see the delivery half clearly.
+
+::
+
+::details-box
+---
+:summary: Can I use GitHub Actions, GitLab CI, Jenkins, or CircleCI with Fleet?
+---
+
+Yes - all of them, and you are not locked into any Rancher-specific pipeline. Fleet does not integrate with a CI tool through a plugin or a direct connection; the two meet at **Git**. Whatever builds your code just needs to commit the resulting manifest change (usually a new image tag) to the repository Fleet watches. Because "write a commit to Git" is something every CI system can do, they all work the same way:
+
+- **GitHub Actions** and **GitLab CI** are the most common pairings, since the pipeline and the Git repository live in the same product - the "commit the change back to Git" step is built in.
+- **Jenkins** and **CircleCI** integrate identically; they just need credentials to push to the manifest repository (or to open a pull request that gets merged).
+- The same holds for **Gitea Actions**, **Tekton**, **Argo Workflows**, or any other runner.
+
+A common and healthy shape is two repositories: an *app-source* repo that CI builds from, and a *config* repo that Fleet watches. CI bridges them - it builds the image and then commits the updated manifest to the config repo. The rule to remember is that the CI tool's job ends at the Git commit, and Fleet's job begins there. No pipeline ever runs `kubectl` against the cluster.
 
 ::
 
