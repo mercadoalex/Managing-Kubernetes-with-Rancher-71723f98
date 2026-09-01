@@ -169,7 +169,7 @@ Fleet is watching your Gitea repository.
 
 ## Step 3: Commit a Change and Watch Fleet Reconcile
 
-Now the real loop. Clone the repository, change the replica count, commit, and push - all against Gitea. Fleet will notice the new commit and scale the Deployment for you.
+Now the real loop. Still on the :tab{text='dev-machine' machine='dev-machine'} terminal - your workstation, which has `git` and can reach Gitea over the network - clone the repository, change the replica count, commit, and push, all against Gitea. You never log in to the Gitea machine or the cluster to do this; you work as a developer would, from your own workstation. Fleet will notice the new commit and scale the Deployment for you.
 
 ```bash
 cd /tmp
