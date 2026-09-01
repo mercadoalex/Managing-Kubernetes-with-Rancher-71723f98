@@ -115,9 +115,10 @@ Wait until the `local` cluster shows a `BUNDLES-READY` count (for example `1/1`)
 
 ::
 
-From the :tab{text='dev-machine' machine='dev-machine'} terminal, create a `GitRepo` in the `fleet-local` namespace that points at the Gitea repo. Use the server's **IP address**, not its hostname:
+From the :tab{text='dev-machine' machine='dev-machine'} terminal, create a `GitRepo` in the `fleet-local` namespace that points at the Gitea repo. Use the server's **IP address**, not its hostname. The here-document pipes the manifest straight into `kubectl`, so there is no file to create:
 
-```yaml
+```bash
+kubectl apply -f - <<'EOF'
 apiVersion: fleet.cattle.io/v1alpha1
 kind: GitRepo
 metadata:
@@ -130,13 +131,10 @@ spec:
     - manifests
   targets:
     - clusterSelector: {}
+EOF
 ```
 
-Apply it:
-
-```bash
-kubectl apply -f <your-gitrepo>.yaml
-```
+If you prefer working with a file, save the manifest between the `EOF` markers to `web-app-gitrepo.yaml` and run `kubectl apply -f web-app-gitrepo.yaml` instead - the result is identical.
 
 ::remark-box
 ---
