@@ -67,7 +67,27 @@ It is tempting to run the Git server as a pod on the same cluster Fleet deploys 
 
 ## Step 1: Explore the Gitea Repository
 
-Open the :tab{text='Gitea' name='Gitea'} tab and log in with username `student` and password `student`. Open the `student/sample-app` repository and look at `manifests/web.yaml` - a plain nginx `Deployment` with `replicas: 1`. This is the file Fleet will deploy, and the file you will change.
+Open the :tab{text='Gitea' name='Gitea'} tab and log in with username `student` and password `student`.
+
+::image-box
+---
+:src: __static__/gitea-login-screen-v1.png
+:alt: The Gitea sign-in page served from the self-hosted Gitea server, with fields for username and password
+:max-width: 800px
+---
+_The self-hosted Gitea server's sign-in page - log in with `student` / `student`._
+::
+
+Open the `student/sample-app` repository and look at `manifests/web.yaml` - a plain nginx `Deployment` with `replicas: 1`. This is the file Fleet will deploy, and the file you will change.
+
+::image-box
+---
+:src: __static__/gitea-sample-app-repo-v1.png
+:alt: The student/sample-app repository in the Gitea web UI after logging in, showing the manifests directory and the web.yaml Deployment file that Fleet deploys
+:max-width: 900px
+---
+_The `student/sample-app` repository in Gitea, holding `manifests/web.yaml` - the manifest Fleet watches._
+::
 
 ## Step 2: Point Fleet at the Gitea Repository
 
