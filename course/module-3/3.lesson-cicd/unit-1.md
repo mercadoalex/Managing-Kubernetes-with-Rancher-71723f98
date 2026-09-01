@@ -189,6 +189,15 @@ git -c user.email=student@example.com -c user.name=student commit -am "Scale web
 git push origin main
 ```
 
+::details-box
+---
+:summary: Could I just edit the file in the Gitea web UI instead?
+---
+
+Yes. Open `manifests/web.yaml` in Gitea, click the edit (pencil) icon, change `replicas`, and commit from the browser. That creates a commit on `main` exactly like `git push` does, and Fleet reconciles it the same way - because Fleet reacts to the commit, not to how you made it. We use the command line here because it mirrors how a real pipeline or a developer commits changes, and because it is scriptable, but the browser edit is the fastest way to watch the loop with no local `git` at all. Either path satisfies the challenge, which checks the end state (more than one replica), not the method.
+
+::
+
 Then watch the cluster follow Git, without any `kubectl apply` of your own:
 
 ```bash
