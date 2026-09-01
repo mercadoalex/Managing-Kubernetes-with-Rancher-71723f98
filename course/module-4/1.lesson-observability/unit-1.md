@@ -449,7 +449,7 @@ The **New dashboard** button is under **Dashboards** in the left navigation (the
 
 You installed the Prometheus and Grafana stack that underpins Rancher Monitoring, browsed the built-in dashboards, caused a real failure, watched your own alert catch it and fire, and built a dashboard panel from a raw metric. That is the core observability loop: collect metrics, visualize them, and alert on the conditions that matter. On a production cluster you would enable Rancher's Monitoring app for the same stack with UI integration, but the objects you worked with here - Prometheus, Grafana, and PrometheusRule - are identical.
 
-This lesson covered the metrics pillar of observability. Logs and traces are the other two; Rancher packages a Logging app (Grafana Loki) for the logs pillar, which a later lesson explores.
+This lesson covered the metrics pillar of observability. Logs and traces are the other two; the next lesson adds the logs pillar by installing Grafana Loki and the Alloy log shipper, then querying your cluster's logs in this same Grafana.
 
 The challenge below has you stand up the stack, break a pod, and prove your alert fires. Solving it records your progress.
 
