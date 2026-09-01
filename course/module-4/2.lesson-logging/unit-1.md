@@ -273,6 +273,24 @@ In Grafana, go to **Connections > Data sources > Add data source**, choose **Lok
 http://loki.loki.svc.cluster.local:3100
 ```
 
+Just below the URL, Grafana shows an **Authentication** section. Leave it on **No Authentication**. The Loki you installed runs with `auth_enabled: false`, and it is reached over the cluster's internal network, so no credentials are needed here.
+
+::details-box
+---
+:summary: What are the other authentication options for?
+---
+
+Grafana offers several ways to authenticate to a data source, and which one you use depends on how the data source is exposed and secured - not on Grafana itself:
+
+- **No Authentication** - Grafana connects with no credentials. Correct here: this Loki has authentication disabled and is only reachable inside the cluster, which is the common setup for a lab or for a Loki that sits behind an internal, trusted network.
+- **Basic authentication** - a username and password sent with each request. You would use this if Loki (or a proxy in front of it) were configured to require basic-auth credentials, for example a Loki exposed outside the cluster.
+- **Forward OAuth Identity / OAuth2** - Grafana forwards the logged-in user's OAuth token, or authenticates with an OAuth2 client. This fits managed or multi-tenant setups (such as Grafana Cloud Logs or a Loki gateway that enforces per-user access) where each request must carry an identity.
+- **TLS options** (client certificate, skip TLS verify, CA cert) - used when Loki is served over HTTPS and you need to present a client certificate or trust a custom CA.
+
+In production you would typically put Loki behind a gateway or ingress that enforces one of these. Because this lab keeps Loki internal and unauthenticated, No Authentication is both correct and the simplest.
+
+::
+
 Click **Save & test**. Grafana confirms it can reach Loki.
 
 ::image-box
