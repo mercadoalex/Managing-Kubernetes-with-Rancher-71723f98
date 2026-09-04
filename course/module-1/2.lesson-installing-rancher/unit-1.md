@@ -161,6 +161,15 @@ helm repo add jetstack https://charts.jetstack.io
 helm repo update
 ```
 
+::remark-box
+---
+kind: warning
+---
+
+**If you see `connection reset by peer`:** this is a transient network hiccup, not a permissions problem. Wait a moment and re-run the two commands above. `helm repo add` is safe to repeat.
+
+::
+
 ::details-box
 ---
 :summary: Wait, what is Jetstack?
